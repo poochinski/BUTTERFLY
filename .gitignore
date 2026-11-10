@@ -1,7 +1,0 @@
-# Godot 4 generated folders
-.godot/
-/android/
-*.tmp
-*.translation
-export_presets.cfg
-/builds/
