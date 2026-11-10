@@ -1,0 +1,61 @@
+; Engine configuration file.
+; Open this folder in Godot 4.7+ and press F5 to play.
+
+config_version=5
+
+[application]
+
+config/name="PAPERCUT"
+config/description="A papercraft military shooter. Cardboard, paper, felt and yarn, built for fast, classic-style multiplayer combat against bots."
+run/main_scene="res://scenes/main.tscn"
+config/features=PackedStringArray("4.7", "Forward Plus")
+config/icon="res://icon.svg"
+
+[autoload]
+
+Game="*res://scripts/core/game.gd"
+Sfx="*res://scripts/core/sfx.gd"
+
+[display]
+
+window/size/viewport_width=1920
+window/size/viewport_height=1080
+window/size/window_width_override=1600
+window/size/window_height_override=900
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+window/vsync/vsync_mode=1
+
+[gui]
+
+theme/custom_font="res://assets/fonts/Fredoka.ttf"
+
+[input_devices]
+
+pointing/emulate_mouse_from_touch=false
+
+[layer_names]
+
+3d_physics/layer_1="world"
+3d_physics/layer_2="soldiers"
+3d_physics/layer_3="projectiles"
+
+[physics]
+
+common/physics_ticks_per_second=120
+common/max_physics_steps_per_frame=8
+
+[rendering]
+
+anti_aliasing/quality/msaa_3d=2
+anti_aliasing/quality/screen_space_aa=1
+lights_and_shadows/directional_shadow/size=4096
+lights_and_shadows/directional_shadow/soft_shadow_filter_quality=3
+lights_and_shadows/positional_shadow/soft_shadow_filter_quality=3
+
+[shader_globals]
+
+vm_fov_scale={
+"type": "float",
+"value": 1.0
+}
