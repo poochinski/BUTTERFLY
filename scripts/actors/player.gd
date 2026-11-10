@@ -85,6 +85,10 @@ func respawn(at: Transform3D) -> void:
 	_cook = -1.0
 	_swap_pending = -1
 	_mantle_t = -1.0
+	# The death cam moves and turns the camera; put it back exactly.
+	camera.transform = Transform3D.IDENTITY
+	camera.fov = Game.fov()
+	head_pivot.rotation = Vector3.ZERO
 	camera.make_current()
 	model.set_shadow_only(true)
 	vm.visible = true
@@ -256,7 +260,10 @@ func _footsteps(delta: float, speed: float) -> void:
 	_step_t += delta * speed * (0.42 if not sprinting else 0.36)
 	if _step_t > 1.0:
 		_step_t = 0.0
-		Sfx.play_3d("step", global_position, -14.0 if stance != Stance.STAND else -9.0)
+		var vol := -17.0 if stance == Stance.STAND else -25.0
+		if sprinting:
+			vol += 3.0
+		Sfx.play_ui("step%d" % (randi() % 4), vol)
 
 
 ## Climb over low walls and onto ledges up to chest height.

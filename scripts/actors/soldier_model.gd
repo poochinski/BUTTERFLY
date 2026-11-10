@@ -48,14 +48,23 @@ func _build() -> void:
 	var paper_skin := _m(Craft.Kind.PAPER, skin, 0, Color.WHITE, false)
 	var boot := _m(Craft.Kind.PLASTIC, Color(0.2, 0.15, 0.12), 0, Color.WHITE, false)
 
-	hips = Craft.pivot(self, Vector3(0, 0.92, 0))
-	Craft.box(hips, Vector3(0, 0, 0), Vector3(0.36, 0.2, 0.22), felt_dark)
+	# Plush proportions: a soft felt body, chunky limbs and a quilted vest.
+	hips = Craft.pivot(self, Vector3(0, 0.84, 0))
+	Craft.part(hips, Craft.capsule(0.2, 0.42), felt_dark, Vector3(0, 0.0, 0), Vector3(0, 0, PI * 0.5), Vector3(1.0, 1.0, 0.72))
 	torso = Craft.pivot(hips, Vector3(0, 0.1, 0))
-	Craft.box(torso, Vector3(0, 0.27, 0), Vector3(0.42, 0.5, 0.26), felt)
-	Craft.box(torso, Vector3(0, 0.27, -0.02), Vector3(0.46, 0.4, 0.3), vest)
+	Craft.part(torso, Craft.capsule(0.22, 0.62), felt, Vector3(0, 0.27, 0), Vector3.ZERO, Vector3(1.0, 1.0, 0.72))
+	var vest_root := Craft.pivot(torso, Vector3(0, 0.27, 0))
+	Craft.box(vest_root, Vector3(0, 0.02, -0.12), Vector3(0.4, 0.4, 0.07), vest, Vector3(0.06, 0, 0))
+	Craft.box(vest_root, Vector3(0, 0.02, 0.13), Vector3(0.4, 0.42, 0.07), vest, Vector3(-0.05, 0, 0))
+	var pouch := _m(Craft.Kind.FELT, uniform_c.lightened(0.18), Craft.Pattern.STITCH, Craft.CREAM)
 	for x: float in [-0.12, 0.0, 0.12]:
-		Craft.box(torso, Vector3(x, 0.2, -0.175), Vector3(0.09, 0.12, 0.04), _m(Craft.Kind.FELT, uniform_c.lightened(0.15)))
-	Craft.box(torso, Vector3(0, 0.3, 0.2), Vector3(0.32, 0.36, 0.14), _m(Craft.Kind.CARDBOARD, Craft.KRAFT_DARK))
+		Craft.box(vest_root, Vector3(x, -0.08, -0.175), Vector3(0.1, 0.13, 0.06), pouch)
+		Craft.part(vest_root, Craft.cylinder(0.012, 0.012, 0.01, 8), Craft.mat(Craft.Kind.PLASTIC, Craft.YELLOW, 0, Color.WHITE, 1.0, 0.0, false), Vector3(x, -0.03, -0.207), Vector3(PI * 0.5, 0, 0))
+	var strap := _m(Craft.Kind.TAPE, Craft.KRAFT_DARK)
+	for x: float in [-0.13, 0.13]:
+		Craft.box(vest_root, Vector3(x, 0.24, 0.0), Vector3(0.06, 0.05, 0.34), strap)
+	Craft.box(torso, Vector3(0, 0.3, 0.24), Vector3(0.3, 0.34, 0.14), _m(Craft.Kind.CARDBOARD, Craft.KRAFT_DARK))
+	Craft.part(torso, Craft.capsule(0.06, 0.32), _m(Craft.Kind.KNIT, Game.TEAM_COLORS[team].lightened(0.2)), Vector3(0, 0.5, 0.25), Vector3(0, 0, PI * 0.5))
 
 	head = Craft.pivot(torso, Vector3(0, 0.56, 0))
 	Craft.part(head, Craft.sphere(0.17, 16), paper_skin, Vector3(0, 0.15, 0), Vector3.ZERO, Vector3(1.0, 0.95, 0.95))
@@ -92,11 +101,12 @@ func _build() -> void:
 			arm_r = sh
 			forearm_r = el
 	for side: float in [-1.0, 1.0]:
-		var hp := Craft.pivot(hips, Vector3(side * 0.11, -0.06, 0))
-		Craft.box(hp, Vector3(0, -0.2, 0), Vector3(0.15, 0.4, 0.17), felt_dark)
-		var kn := Craft.pivot(hp, Vector3(0, -0.42, 0))
-		Craft.box(kn, Vector3(0, -0.18, 0), Vector3(0.14, 0.38, 0.16), felt_dark)
-		Craft.box(kn, Vector3(0, -0.4, -0.04), Vector3(0.16, 0.12, 0.26), boot)
+		var hp := Craft.pivot(hips, Vector3(side * 0.11, -0.04, 0))
+		Craft.part(hp, Craft.capsule(0.095, 0.42), felt_dark, Vector3(0, -0.17, 0))
+		var kn := Craft.pivot(hp, Vector3(0, -0.38, 0))
+		Craft.part(kn, Craft.capsule(0.085, 0.38), felt_dark, Vector3(0, -0.15, 0))
+		Craft.part(kn, Craft.cylinder(0.092, 0.092, 0.05, 12), _m(Craft.Kind.KNIT, Craft.CREAM, 0, Color.WHITE, false), Vector3(0, -0.27, 0))
+		Craft.part(kn, Craft.capsule(0.08, 0.28), boot, Vector3(0, -0.36, -0.05), Vector3(PI * 0.5, 0, 0), Vector3(1.15, 1.0, 0.8))
 		if side < 0.0:
 			leg_l = hp
 			knee_l = kn
@@ -172,7 +182,7 @@ func animate(delta: float, speed: float, stance: int, pitch: float, sprinting: b
 	leg_r.rotation.x = -s * swing + _crouch * 0.3
 	knee_l.rotation.x = -maxf(0.0, sin(_phase + 1.3)) * 1.0 * amt - _crouch * 1.6
 	knee_r.rotation.x = -maxf(0.0, sin(_phase + 1.3 + PI)) * 1.0 * amt - _crouch * 0.9
-	hips.position.y = 0.92 - _crouch * 0.42 + absf(cos(_phase)) * 0.04 * amt
+	hips.position.y = 0.84 - _crouch * 0.38 + absf(cos(_phase)) * 0.04 * amt
 	hips.rotation.y = s * 0.1 * amt
 	torso.rotation.x = -_crouch * 0.15 - (0.25 if sprinting else 0.0)
 	torso.rotation.y = -s * 0.08 * amt

@@ -155,6 +155,13 @@ class SettingsPanel:
 		_slider("Volume", "volume", 0.0, 1.0, 0.05)
 		_toggle("Invert look", "invert_y")
 		_toggle("Fullscreen", "fullscreen")
+		var gq := CheckButton.new()
+		gq.text = "High quality graphics (bounce light, depth of field)"
+		gq.button_pressed = String(Game.settings.get("graphics", "high")) == "high"
+		gq.toggled.connect(func(on):
+			Game.settings["graphics"] = "high" if on else "low"
+			Game.apply_settings())
+		add_child(gq)
 		add_child(UIKit.button("BACK", func():
 			Game.save_profile()
 			visible = false

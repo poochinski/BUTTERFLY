@@ -123,10 +123,31 @@ static func build(id: String, viewmodel: bool, team_color := Color(0.24, 0.45, 0
 			muzzle.position = Vector3(0, 0.055, -0.18)
 			root.set_meta("sight", Vector3(0, 0.09, 0.0))
 			root.set_meta("left", Vector3(-0.02, -0.04, 0.01))
+	if String(w["model"]) != "pistol":
+		_details(root, viewmodel, team_color, ow, m_dark, m_tape)
 	root.set_meta("muzzle", muzzle)
 	root.set_meta("mag", mag)
 	root.set_meta("pump", pump)
 	return root
+
+
+## Small hand-made details that sell the craft look up close: brass-button
+## rivets, an inked ejection port, a pipe-cleaner trigger guard, a team
+## sticker and a felt sling.
+static func _details(root: Node3D, viewmodel: bool, team_color: Color, ow: float, m_dark: Material, m_tape: Material) -> void:
+	var shadows := not viewmodel
+	var rivet := Craft.mat(Craft.Kind.PLASTIC, Color(0.85, 0.66, 0.25), 0, Color.WHITE, 1.0, 0.0, false, viewmodel)
+	for side: float in [-1.0, 1.0]:
+		for z: float in [-0.17, -0.05, 0.06]:
+			Craft.part(root, Craft.cylinder(0.006, 0.006, 0.006, 8), rivet, Vector3(side * 0.029, 0.05, z), Vector3(0, 0, PI * 0.5), Vector3.ONE, shadows)
+	_b(root, Vector3(0.0285, 0.045, -0.07), Vector3(0.004, 0.022, 0.07), m_dark, shadows)
+	var pipe := Craft.mat(Craft.Kind.FELT, Color(0.2, 0.2, 0.22), 0, Color.WHITE, 1.0, 0.0, false, viewmodel)
+	_b(root, Vector3(0, -0.035, -0.07), Vector3(0.01, 0.008, 0.075), pipe, shadows)
+	_b(root, Vector3(0, -0.02, -0.035), Vector3(0.006, 0.03, 0.006), Craft.mat(Craft.Kind.FOIL, Color(0.75, 0.76, 0.8), 0, Color.WHITE, 1.0, 0.0, false, viewmodel), shadows, Vector3(0.3, 0, 0))
+	var sticker := Craft.mat(Craft.Kind.PAPER, team_color, 0, Color.WHITE, 1.0, 0.0, false, viewmodel)
+	Craft.part(root, Craft.cutout(Craft.star_points(0.022, 0.01), 0.002), sticker, Vector3(0.0285, 0.035, 0.17), Vector3(0, PI * 0.5, 0.3), Vector3.ONE, shadows)
+	var sling := Craft.mat(Craft.Kind.KNIT, team_color.darkened(0.2), 0, Color.WHITE, 3.0, 0.0, true, viewmodel)
+	_b(root, Vector3(-0.03, -0.02, 0.12), Vector3(0.006, 0.02, 0.28), sling, shadows, Vector3(0.12, 0, 0))
 
 
 static func knife(viewmodel: bool) -> Node3D:

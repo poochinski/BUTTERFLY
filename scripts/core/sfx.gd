@@ -100,6 +100,30 @@ func _shot(len: float, body_hz: float, crack: float, tail: float, lp: float, sna
 	return _wav(out)
 
 
+## A soft, muffled footfall: a low felt thump with a faint cardboard
+## creak. Four slightly different variants so steps never sound looped.
+func _footstep(variant: int) -> AudioStreamWAV:
+	var len := 0.16
+	var n := int(len * RATE)
+	var out := PackedFloat32Array()
+	out.resize(n)
+	var low := 0.0
+	var low2 := 0.0
+	var phase := 0.0
+	var f0 := 70.0 + variant * 9.0
+	for i in n:
+		var t := float(i) / RATE
+		var noise := _rand()
+		low += (noise - low) * 0.06
+		low2 += (low - low2) * 0.06
+		phase += f0 * (1.0 + exp(-t * 30.0)) / RATE * TAU
+		var thump := sin(phase) * exp(-t * 32.0)
+		var scuff := low2 * exp(-t * 22.0) * 3.0
+		var attack := minf(1.0, t * 250.0)
+		out[i] = (thump * 0.7 + scuff * 0.5) * attack
+	return _wav(out)
+
+
 func _noise_burst(len: float, lp: float, decay: float, hp := 0.0, crackle := 0.0) -> AudioStreamWAV:
 	var n := int(len * RATE)
 	var out := PackedFloat32Array()
@@ -180,7 +204,9 @@ func _build_bank() -> void:
 	_bank["sniper"] = _shot(1.1, 55.0, 14.0, 3.0, 0.22, 0.3)
 	_bank["shotgun"] = _shot(0.75, 60.0, 16.0, 4.5, 0.25, 0.4)
 	_bank["explosion"] = _noise_burst(1.6, 0.05, 2.4, 0.0, 0.03)
-	_bank["step"] = _noise_burst(0.09, 0.5, 45.0, 0.6, 0.05)
+	for i in 4:
+		_bank["step%d" % i] = _footstep(i)
+	_bank["step"] = _bank["step0"]
 	_bank["jump"] = _noise_burst(0.12, 0.4, 30.0, 0.5, 0.04)
 	_bank["land"] = _noise_burst(0.16, 0.18, 30.0, 0.0, 0.05)
 	_bank["mantle"] = _noise_burst(0.3, 0.35, 10.0, 0.5, 0.08)

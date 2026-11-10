@@ -79,8 +79,18 @@ static func crate(b: MapBuilder, pos: Vector3, size: float, yaw: float, col := C
 	var m := Craft.mat(Craft.Kind.CARDBOARD, col)
 	var body := b.solid(pos + Vector3(0, size * 0.5, 0), Vector3(size, size, size), m, yaw)
 	var tape := Craft.mat(Craft.Kind.TAPE, Color(0.93, 0.86, 0.66))
-	Craft.box(body, Vector3(0, size * 0.5 + 0.002, 0), Vector3(size * 0.18, 0.004, size + 0.004), tape)
+	# Top flaps: usually taped shut, sometimes popped open.
+	var open := randf() < 0.3
+	for side: float in [-1.0, 1.0]:
+		var hinge := Craft.pivot(body, Vector3(side * size * 0.5, size * 0.5, 0))
+		hinge.rotation.z = side * (1.9 if open else 0.0)
+		Craft.box(hinge, Vector3(-side * size * 0.25, 0.006, 0), Vector3(size * 0.5, 0.012, size * 0.98), m)
+	if not open:
+		Craft.box(body, Vector3(0, size * 0.5 + 0.014, 0), Vector3(size * 0.18, 0.004, size + 0.004), tape)
 	Craft.box(body, Vector3(0, 0, size * 0.5 + 0.002), Vector3(size * 0.18, size + 0.004, 0.004), tape)
+	# A printed "this way up" arrow.
+	var arrow := Craft.cutout(PackedVector2Array([Vector2(-0.06, -0.12), Vector2(0.06, -0.12), Vector2(0.06, 0.02), Vector2(0.12, 0.02), Vector2(0, 0.14), Vector2(-0.12, 0.02), Vector2(-0.06, 0.02)]), 0.004)
+	Craft.part(body, arrow, Craft.mat(Craft.Kind.PAPER, Craft.INK, 0, Color.WHITE, 1.0, 0.0, false), Vector3(size * 0.25, 0, size * 0.5 + 0.004), Vector3.ZERO, Vector3.ONE * size, false)
 	return body
 
 

@@ -41,7 +41,8 @@ func _ready() -> void:
 				if s.team == 1:
 					var fwd := Vector3(-sin(p.yaw), 0, -cos(p.yaw))
 					s.global_position = p.global_position + fwd * 9.0 + Vector3(1.2, 0, 0)
-					s.set_physics_process(false)
+					(s as Bot).debug_hold = true
+					s.set_physics_process(true)
 					(s as Bot).yaw = p.yaw + PI
 					s.rotation.y = p.yaw + PI
 					break

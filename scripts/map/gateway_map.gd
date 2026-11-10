@@ -19,6 +19,8 @@ var deco: Node3D
 var b: MapBuilder
 var rng := RandomNumberGenerator.new()
 var sun: DirectionalLight3D
+var env: Environment
+var cam_attr: CameraAttributesPractical
 
 func build() -> void:
 	rng.seed = 1977
@@ -39,6 +41,7 @@ func build() -> void:
 	_apron()
 	_bounds()
 	_backdrop()
+	_dressing()
 	_spawn_points()
 	_bake_navigation()
 
@@ -46,61 +49,103 @@ func build() -> void:
 # --------------------------------------------------------------- lighting
 
 func _environment() -> void:
+	# Warm late-afternoon sun, low enough for long, soft shadows.
 	sun = DirectionalLight3D.new()
 	sun.name = "Sun"
-	sun.light_color = Color(1.0, 0.95, 0.86)
-	sun.light_energy = 1.35
+	sun.light_color = Color(1.0, 0.89, 0.74)
+	sun.light_energy = 1.7
+	sun.light_angular_distance = 1.2
 	sun.shadow_enabled = true
 	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS
-	sun.directional_shadow_max_distance = 90.0
-	sun.shadow_blur = 1.4
-	sun.rotation = Vector3(deg_to_rad(-52.0), deg_to_rad(-35.0), 0.0)
+	sun.directional_shadow_max_distance = 110.0
+	sun.directional_shadow_blend_splits = true
+	sun.shadow_blur = 1.6
+	sun.shadow_bias = 0.04
+	sun.rotation = Vector3(deg_to_rad(-36.0), deg_to_rad(-38.0), 0.0)
 	add_child(sun)
+	# A cool fill from the sky side keeps shadows blue rather than grey.
+	var fill := DirectionalLight3D.new()
+	fill.name = "SkyFill"
+	fill.light_color = Color(0.62, 0.78, 1.0)
+	fill.light_energy = 0.28
+	fill.shadow_enabled = false
+	fill.sky_mode = DirectionalLight3D.SKY_MODE_LIGHT_ONLY
+	fill.rotation = Vector3(deg_to_rad(-55.0), deg_to_rad(150.0), 0.0)
+	add_child(fill)
 
 	var sky_mat := ShaderMaterial.new()
 	sky_mat.shader = preload("res://shaders/sky.gdshader")
 	var sky := Sky.new()
 	sky.sky_material = sky_mat
 	sky.radiance_size = Sky.RADIANCE_SIZE_128
-	var env := Environment.new()
+	env = Environment.new()
 	env.background_mode = Environment.BG_SKY
 	env.sky = sky
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
-	env.ambient_light_energy = 0.75
+	env.ambient_light_energy = 0.5
 	env.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
-	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
-	env.tonemap_exposure = 1.05
-	env.ssao_enabled = true
-	env.ssao_radius = 1.6
-	env.ssao_intensity = 2.8
-	env.ssao_power = 1.4
-	env.glow_enabled = true
-	env.glow_intensity = 0.45
-	env.glow_bloom = 0.04
-	env.glow_hdr_threshold = 1.2
+	env.tonemap_mode = Environment.TONE_MAPPER_ACES
+	env.tonemap_exposure = 1.0
+	env.tonemap_white = 6.0
+	env.ssao_radius = 1.4
+	env.ssao_intensity = 2.6
+	env.ssao_power = 1.6
+	env.ssao_detail = 0.8
+	env.ssao_light_affect = 0.15
+	env.ssil_radius = 4.0
+	env.ssil_intensity = 1.3
+	env.ssil_sharpness = 0.9
+	env.glow_intensity = 0.4
+	env.glow_bloom = 0.05
+	env.glow_hdr_threshold = 1.0
+	env.glow_blend_mode = Environment.GLOW_BLEND_MODE_SOFTLIGHT
 	env.fog_enabled = true
-	env.fog_light_color = Color(0.72, 0.88, 0.9)
-	env.fog_density = 0.0025
-	env.fog_aerial_perspective = 0.6
+	env.fog_light_color = Color(0.84, 0.9, 0.95)
+	env.fog_density = 0.0012
+	env.fog_aerial_perspective = 0.35
 	env.fog_sky_affect = 0.0
 	env.adjustment_enabled = true
-	env.adjustment_saturation = 1.12
-	env.adjustment_contrast = 1.04
+	env.adjustment_saturation = 1.32
+	env.adjustment_contrast = 1.12
+	env.adjustment_color_correction = _grade()
 	var we := WorldEnvironment.new()
 	we.environment = env
-	var cam_attr := CameraAttributesPractical.new()
-	cam_attr.dof_blur_far_enabled = true
-	cam_attr.dof_blur_far_distance = 75.0
-	cam_attr.dof_blur_far_transition = 60.0
-	cam_attr.dof_blur_amount = 0.05
+	cam_attr = CameraAttributesPractical.new()
+	cam_attr.dof_blur_far_distance = 60.0
+	cam_attr.dof_blur_far_transition = 55.0
+	cam_attr.dof_blur_amount = 0.07
 	we.camera_attributes = cam_attr
 	add_child(we)
+	apply_graphics()
+	Game.settings_changed.connect(apply_graphics)
+
+
+## Split-tone grade: cool, slightly teal shadows and warm, creamy highlights,
+## like a photo of a real craft diorama.
+func _grade() -> GradientTexture1D:
+	var g := Gradient.new()
+	g.offsets = PackedFloat32Array([0.0, 0.25, 0.6, 1.0])
+	g.colors = PackedColorArray([Color(0.02, 0.04, 0.09), Color(0.22, 0.26, 0.33), Color(0.66, 0.63, 0.58), Color(1.0, 0.97, 0.9)])
+	var t := GradientTexture1D.new()
+	t.gradient = g
+	t.width = 256
+	return t
+
+
+func apply_graphics() -> void:
+	var high := String(Game.settings.get("graphics", "high")) == "high"
+	env.ssao_enabled = true
+	env.ssil_enabled = high
+	env.glow_enabled = true
+	cam_attr.dof_blur_far_enabled = high
+	sun.shadow_blur = 1.6 if high else 1.0
+	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS if high else DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
 
 
 # ----------------------------------------------------------------- ground
 
 func _ground() -> void:
-	var asphalt := Craft.mat(Craft.Kind.PAPER, Color(0.42, 0.44, 0.48), 0, Color.WHITE, 1.0, 0.0)
+	var asphalt := Craft.mat(Craft.Kind.CARDBOARD, Color(0.35, 0.37, 0.41), 7, Color(0.27, 0.29, 0.32), 1.0, 0.0)
 	b.span(Vector3(-62, -0.5, -42), Vector3(64, 0.0, 30), asphalt)
 	# Terminal and sidewalk floors (visual layers of paper on top).
 	var tiles := Craft.mat(Craft.Kind.PAPER, Color(0.96, 0.9, 0.78), Craft.Pattern.CHECKER, Color(0.86, 0.78, 0.66), 0.5, 0.0)
@@ -122,8 +167,8 @@ func _ground() -> void:
 # --------------------------------------------------------------- terminal
 
 func _terminal() -> void:
-	var outer := Craft.mat(Craft.Kind.CARDBOARD, Color(0.96, 0.9, 0.78), Craft.Pattern.BANDS, Color(0.3, 0.68, 0.72), 0.25)
-	var inner := Craft.mat(Craft.Kind.CARDBOARD, Color(0.98, 0.84, 0.62))
+	var outer := Craft.mat(Craft.Kind.CARDBOARD, Color(0.95, 0.86, 0.68), Craft.Pattern.WALL, Craft.TEAL, 1.0)
+	var inner := Craft.mat(Craft.Kind.CARDBOARD, Color(0.98, 0.8, 0.55), Craft.Pattern.WALL, Craft.PINK, 1.0)
 	var accent := Craft.mat(Craft.Kind.CARDBOARD, Craft.TEAL)
 	var purple := Craft.mat(Craft.Kind.CARDBOARD, Craft.PURPLE, Craft.Pattern.STITCH, Color(0.9, 0.85, 1.0))
 	var rail_m := Craft.mat(Craft.Kind.CARDBOARD, Craft.YELLOW)
@@ -248,7 +293,7 @@ func _airliner() -> void:
 	var zc := -2.0
 	var yc := 4.4
 	var r := 3.2
-	var skin := Craft.mat(Craft.Kind.PAPER, Color(0.97, 0.96, 0.93), 0, Color.WHITE, 1.0, 0.0, false)
+	var skin := Craft.mat(Craft.Kind.PAPER, Color(0.97, 0.95, 0.9), Craft.Pattern.WALL, Color(0.97, 0.95, 0.9), 1.4, 0.0, false)
 	var cabin := Craft.mat(Craft.Kind.PAPER, Color(0.98, 0.93, 0.83), 0, Color.WHITE, 1.0, 0.0, false)
 	var livery := Craft.mat(Craft.Kind.PAPER, Craft.TEAL, 0, Color.WHITE, 1.0, 0.0, false)
 	var livery2 := Craft.mat(Craft.Kind.PAPER, Craft.PINK, 0, Color.WHITE, 1.0, 0.0, false)
@@ -389,7 +434,7 @@ func _slab_polygon(pts: PackedVector2Array, side: float, zc: float, y: float, th
 # ----------------------------------------------------------- baggage hall
 
 func _baggage_hall() -> void:
-	var wall_m := Craft.mat(Craft.Kind.CARDBOARD, Craft.PURPLE, Craft.Pattern.BANDS, Color(0.58, 0.46, 0.9), 0.4)
+	var wall_m := Craft.mat(Craft.Kind.CARDBOARD, Craft.PURPLE, Craft.Pattern.WALL, Craft.YELLOW, 1.0)
 	var inner_m := Craft.mat(Craft.Kind.CARDBOARD, Color(0.82, 0.74, 0.95))
 	b.wall(Vector3(-14, 0, -38), Vector3(32, 0, -38), 5.0, 0.4, wall_m)
 	b.wall(Vector3(-14, 0, -26), Vector3(32, 0, -26), 5.0, 0.4, wall_m, [
@@ -581,6 +626,66 @@ func _backdrop() -> void:
 	var sun_pos := sun_dir * 420.0
 	var sun_disc := Craft.part(far, Craft.cutout(Craft.star_points(26, 20, 14), 2.0), Craft.mat(Craft.Kind.GLOW, Color(1.0, 0.85, 0.4), 0, Color.WHITE, 1.0, 0.0, false), sun_pos, Vector3.ZERO, Vector3.ONE, false)
 	sun_disc.look_at_from_position(sun_pos, Vector3.ZERO, Vector3.UP)
+
+
+# --------------------------------------------------------------- dressing
+
+func _dressing() -> void:
+	var d := Node3D.new()
+	d.name = "Dressing"
+	deco.add_child(d)
+	# Bunting strung across the tarmac, the hall and the baggage area.
+	Dressing.bunting(d, Vector3(-14, 7.6, 18), Vector3(14, 8.7, 23), 1.2, rng)
+	Dressing.bunting(d, Vector3(14, 8.7, 23), Vector3(56, 8.7, 23), 1.8, rng)
+	Dressing.bunting(d, Vector3(0, 8.7, -24), Vector3(56, 8.7, -34), 1.8, rng)
+	Dressing.bunting(d, Vector3(56, 8.7, -34), Vector3(56, 8.7, 23), 2.2, rng)
+	Dressing.bunting(d, Vector3(-57.5, 7.3, -12), Vector3(-14.5, 7.3, -12), 1.0, rng)
+	Dressing.bunting(d, Vector3(-57.5, 7.3, 9), Vector3(-14.5, 7.3, 9), 1.0, rng)
+	Dressing.bunting(d, Vector3(-13.6, 4.6, -31), Vector3(31.6, 4.6, -31), 0.6, rng)
+	# Warm string lights along the mezzanine and the terminal front.
+	Dressing.string_lights(d, Vector3(-57.5, 4.6, -20.1), Vector3(-17.4, 4.6, -20.1), 0.35)
+	Dressing.string_lights(d, Vector3(-57.8, 3.6, 22.4), Vector3(-14.2, 3.6, 22.4), 0.5, false)
+	Dressing.string_lights(d, Vector3(-13.6, 3.6, -25.6), Vector3(31.6, 3.6, -25.6), 0.4, false)
+	# Hanging felt signs.
+	Dressing.hanging_sign(d, Vector3(-16.0, 6.4, -9.0), -PI * 0.5, "GATE 7", Craft.ORANGE, 2.6)
+	Dressing.hanging_sign(d, Vector3(-36.0, 5.6, 3.5), 0.0, "CHECK-IN", Craft.TEAL, 4.0)
+	Dressing.hanging_sign(d, Vector3(-50.0, 5.4, 12.0), PI * 0.5, "DEPARTURES", Craft.PINK, 4.4)
+	# Taped-up posters.
+	var titles := ["FLY PAPERCUT", "FOLD SAFELY", "GATE 7", "VISIT ORIGAMI CITY", "LOST LUGGAGE", "NO CUTTING", "CRAFT AIR", "GLUE ZONE"]
+	var t := 0
+	for z: float in [-15.0, 5.0, 16.0]:
+		Dressing.poster(d, Vector3(-57.72, 1.9, z), PI * 0.5, Vector2(1.1, 1.5), rng, titles[t % titles.size()])
+		t += 1
+	for x: float in [-50.0, -38.0, -27.0, -20.0]:
+		Dressing.poster(d, Vector3(x, 1.8, 21.72), PI, Vector2(1.0, 1.4), rng, titles[t % titles.size()])
+		t += 1
+	for x: float in [-9.0, 6.0, 16.0, 28.0]:
+		Dressing.poster(d, Vector3(x, 2.0, -37.77), 0.0, Vector2(1.2, 1.6), rng, titles[t % titles.size()])
+		t += 1
+	for z: float in [-23.0, -15.0, 18.0]:
+		Dressing.poster(d, Vector3(-13.72, 3.4, z), PI * 0.5, Vector2(1.6, 2.1), rng, titles[t % titles.size()])
+		t += 1
+	# Paper grass and flowers around every edge of the map.
+	var edges := [
+		[Vector3(-58, 0, 26.6), Vector3(60, 0, 26.6)], [Vector3(-58, 0, 29), Vector3(60, 0, 29)],
+		[Vector3(60.6, 0, -38), Vector3(60.6, 0, 26)], [Vector3(63, 0, -40), Vector3(63, 0, 28)],
+		[Vector3(32, 0, -38.6), Vector3(60, 0, -38.6)], [Vector3(-58, 0, 25.4), Vector3(-14, 0, 25.4)],
+		[Vector3(59.3, 0, -36), Vector3(59.3, 0, 24)], [Vector3(34, 0, -37.3), Vector3(58, 0, -37.3)],
+	]
+	for e in edges:
+		var a: Vector3 = e[0]
+		var b2: Vector3 = e[1]
+		var n := int(a.distance_to(b2) / 1.6)
+		for i in n:
+			var p := a.lerp(b2, (i + rng.randf()) / n) + Vector3(rng.randf_range(-0.6, 0.6), 0, rng.randf_range(-0.6, 0.6))
+			if rng.randf() < 0.18:
+				Dressing.flower(d, p, rng)
+			else:
+				Dressing.grass(d, p, rng.randf_range(0.7, 1.3), rng, rng.randf() < 0.25)
+	for c: Vector3 in [Vector3(-50, 0, 24.2), Vector3(-28, 0, 24.2), Vector3(-55.5, 0, -18), Vector3(-55.5, 0, 19.5), Vector3(-16.5, 0, 19.5)]:
+		for i in 4:
+			var a2 := rng.randf() * TAU
+			Dressing.grass(d, c + Vector3(cos(a2), 0, sin(a2)) * 0.9, 0.6, rng)
 
 
 # ----------------------------------------------------------------- spawns

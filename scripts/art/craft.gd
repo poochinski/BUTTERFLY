@@ -5,7 +5,7 @@ extends RefCounted
 ## means the whole game shares a handful of shader variants.
 
 enum Kind { CARDBOARD, PAPER, FELT, KNIT, TAPE, PLASTIC, FOIL, GLOW }
-enum Pattern { NONE, HAZARD, DOTS, CHECKER, WINDOWS, STITCH, BANDS }
+enum Pattern { NONE, HAZARD, DOTS, CHECKER, WINDOWS, STITCH, BANDS, FLOOR, WALL }
 
 const CRAFT_SHADER := preload("res://shaders/craft.gdshader")
 const CRAFT_VM_SHADER := preload("res://shaders/craft_vm.gdshader")
@@ -14,16 +14,16 @@ const OUTLINE_VM_SHADER := preload("res://shaders/outline_vm.gdshader")
 const CELLO_SHADER := preload("res://shaders/cellophane.gdshader")
 
 # A palette pulled from the reference crafts.
-const KRAFT := Color(0.8, 0.62, 0.42)
+const KRAFT := Color(0.76, 0.55, 0.34)
 const KRAFT_DARK := Color(0.62, 0.45, 0.3)
 const CREAM := Color(0.97, 0.93, 0.84)
 const INK := Color(0.17, 0.11, 0.08)
-const TEAL := Color(0.18, 0.62, 0.68)
-const PINK := Color(0.95, 0.42, 0.62)
-const PURPLE := Color(0.5, 0.38, 0.85)
-const ORANGE := Color(0.98, 0.55, 0.18)
-const YELLOW := Color(1.0, 0.82, 0.25)
-const GRASS := Color(0.38, 0.72, 0.3)
+const TEAL := Color(0.0, 0.55, 0.62)
+const PINK := Color(0.96, 0.32, 0.55)
+const PURPLE := Color(0.44, 0.28, 0.82)
+const ORANGE := Color(0.98, 0.46, 0.1)
+const YELLOW := Color(1.0, 0.76, 0.12)
+const GRASS := Color(0.3, 0.66, 0.22)
 const RED := Color(0.86, 0.25, 0.2)
 const BLUE := Color(0.24, 0.45, 0.85)
 const SLATE := Color(0.42, 0.45, 0.52)

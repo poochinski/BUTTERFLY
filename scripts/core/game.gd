@@ -30,6 +30,7 @@ var settings := {
 	"class": 0,
 	"player_name": "You",
 	"fullscreen": false,
+	"graphics": "high",
 }
 var profile := {"xp": 0, "kills": 0, "deaths": 0, "wins": 0, "matches": 0}
 

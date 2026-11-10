@@ -82,7 +82,14 @@ models. One "craft" shader renders every supply in the game:
 - knitted yarn, with real stitch patterns
 - masking tape, plastic buttons and caps, and foil
 
-Characters and guns get ink outlines. Defeated soldiers fold flat like
+Every box gets bevelled, light-catching edges and an inked crease along its
+folds. Walls and floors are built from cardboard panels, with painted trim.
+The world is dressed with bunting, string lights, taped-up posters, cut-out
+paper grass and flowers, and hanging felt signs. Soldiers are plush felt
+dolls in quilted cardboard vests. Lighting is a warm late-afternoon sun
+with bounce light, a split-tone colour grade and a gentle far depth of
+field. You can turn the expensive effects off under **Settings → High
+quality graphics**. Characters and guns get ink outlines. Defeated soldiers fold flat like
 paper and burst into confetti, and explosions are cotton-ball puffs. The
 skyline is cardboard stage flats with felt hills, and paper clouds hang on
 strings.

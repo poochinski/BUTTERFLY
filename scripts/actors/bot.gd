@@ -42,6 +42,8 @@ var _knife_cd := 0.0
 var _crouch_t := 0.0
 var _time := 0.0
 var _sprinting := false
+## Debug: stand still and hold an aiming pose at the nearest enemy.
+var debug_hold := false
 
 
 func _ready() -> void:
@@ -76,6 +78,16 @@ func _physics_process(delta: float) -> void:
 	if not alive:
 		if model:
 			model.animate(delta, 0.0, stance, 0.0, false)
+		return
+	if debug_hold:
+		var tgt := get_tree().get_first_node_in_group("soldiers") as Soldier
+		if tgt and tgt != self:
+			var to := tgt.eye_position() - eye_position()
+			yaw = atan2(-to.x, -to.z)
+			aim_pitch = atan2(to.y, Vector2(to.x, to.z).length())
+		rotation.y = yaw
+		if model:
+			model.animate(delta, 0.0, stance, aim_pitch, false)
 		return
 	_think -= delta
 	if _think <= 0.0:
