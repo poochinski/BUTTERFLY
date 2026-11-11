@@ -82,7 +82,27 @@ func _build_loadout() -> void:
 		vm.set_weapon(weapon().id, team_color(), weapon().att)
 
 
+var _spawn_t := 0.0
+var _fired_since_spawn := false
+
+
+## Pick a new class mid-match. Like the classics: it applies at once if you
+## have only just spawned and not fired yet, otherwise on your next spawn.
+func change_class(index: int) -> String:
+	class_index = index
+	if alive and _spawn_t < 6.0 and not _fired_since_spawn:
+		_build_loadout()
+		for w in weapons:
+			w.refill()
+		vm._swap = 1.0
+		vm.raise()
+		return "Class changed"
+	return "Class will change when you respawn"
+
+
 func respawn(at: Transform3D) -> void:
+	_spawn_t = 0.0
+	_fired_since_spawn = false
 	super.respawn(at)
 	yaw = at.basis.get_euler().y
 	aim_pitch = 0.0
@@ -506,6 +526,7 @@ func _swap_to_pickup(pk: WeaponPickup) -> void:
 
 
 func _fire_once(w: Weapon) -> void:
+	_fired_since_spawn = true
 	var origin := camera.global_position
 	var dir := -camera.global_transform.basis.z
 	var moving := clampf(Vector2(velocity.x, velocity.z).length() / WALK, 0.0, 1.0)
@@ -531,6 +552,7 @@ var _land_dip := 0.0
 
 
 func _update_camera(delta: float) -> void:
+	_spawn_t += delta
 	_eye = lerpf(_eye, eye_height(), 1.0 - exp(-12.0 * delta))
 	# A gentle head bob while moving (settles when aiming) and a dip on
 	# landing that springs back.

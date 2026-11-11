@@ -118,31 +118,118 @@ static func pillar(b: MapBuilder, pos: Vector3, height: float, col: Color) -> vo
 
 static func planter(b: MapBuilder, pos: Vector3, rng: RandomNumberGenerator) -> void:
 	var pot := b.solid(pos + Vector3(0, 0.4, 0), Vector3(1.2, 0.8, 1.2), Craft.mat(Craft.Kind.CARDBOARD, Craft.CONCRETE_DARK))
-	var leaf := Craft.mat(Craft.Kind.FELT, Craft.GRASS, 0, Color.WHITE, 1.0, 0.0, false)
-	for i in 5:
-		var pts := Craft.blob_points(0.35, 0.25, 12, rng.randi())
-		var l := Craft.part(pot, Craft.cutout(pts, 0.02), leaf, Vector3(rng.randf_range(-0.2, 0.2), 0.75 + rng.randf() * 0.4, rng.randf_range(-0.2, 0.2)), Vector3(rng.randf_range(-0.4, 0.4), rng.randf() * TAU, 0))
-		l.scale = Vector3(1, 1.4, 1)
+	# A soil top, a clipped box hedge of felt balls and tall grass blades.
+	Craft.box(pot, Vector3(0, 0.39, 0), Vector3(1.1, 0.04, 1.1), Craft.mat(Craft.Kind.FELT, Color(0.3, 0.23, 0.16)))
+	Craft.box(pot, Vector3(0, 0.41, 0), Vector3(1.26, 0.05, 1.26), Craft.mat(Craft.Kind.CARDBOARD, Craft.CONCRETE))
+	var greens := [Craft.mat(Craft.Kind.FELT, Color(0.24, 0.34, 0.19), 0, Color.WHITE, 1.0, 0.0, false), Craft.mat(Craft.Kind.FELT, Color(0.3, 0.38, 0.21), 0, Color.WHITE, 1.0, 0.0, false)]
+	for i in 7:
+		var a := TAU * i / 7.0 + rng.randf() * 0.3
+		var rr := 0.0 if i == 0 else 0.32
+		Craft.part(pot, Craft.sphere(0.26, 10), greens[i % 2], Vector3(cos(a) * rr, 0.62 + (0.12 if i == 0 else 0.0), sin(a) * rr), Vector3.ZERO, Vector3(1.0, 0.85, 1.0))
+	for i in 9:
+		var a := rng.randf() * TAU
+		Craft.box(pot, Vector3(cos(a) * 0.2, 0.95, sin(a) * 0.2), Vector3(0.03, 0.55, 0.01), greens[0], Vector3(rng.randf_range(-0.3, 0.3), a, rng.randf_range(-0.3, 0.3)))
 
 
 static func truck(b: MapBuilder, pos: Vector3, yaw: float, body_col: Color, tank := false) -> void:
+	# Airport service truck: cab with glazing, grille, lights, mirrors and a
+	# roof beacon, a box or tank body behind, reflective stripes, fenders.
 	var paint := Craft.mat(Craft.Kind.CARDBOARD, body_col)
-	var dark := Craft.mat(Craft.Kind.PAPER, Color(0.2, 0.2, 0.24))
-	var glass := Craft.mat(Craft.Kind.PAPER, Color(0.32, 0.4, 0.46))
-	var root := b.solid(pos + Vector3(0, 1.2, 0), Vector3(2.4, 1.6, 6.5), paint, yaw)
-	Craft.box(root, Vector3(0, -0.85, 0), Vector3(2.2, 0.3, 6.4), dark)
-	Craft.box(root, Vector3(0, 0.55, -2.6), Vector3(2.3, 0.7, 1.1), paint)
-	Craft.box(root, Vector3(0, 0.55, -3.16), Vector3(1.9, 0.5, 0.02), glass)
+	var dark := Craft.mat(Craft.Kind.PAPER, Color(0.14, 0.14, 0.16))
+	var glass := Craft.cellophane(Color(0.18, 0.24, 0.28, 0.75))
+	var lamp := Craft.mat(Craft.Kind.GLOW, Color(1.0, 0.95, 0.82), 0, Color.WHITE, 1.0, 0.0, false)
+	var tail := Craft.mat(Craft.Kind.GLOW, Color(0.75, 0.08, 0.06), 0, Color.WHITE, 1.0, 0.0, false)
+	var amber := Craft.mat(Craft.Kind.GLOW, Color(1.0, 0.55, 0.1), 0, Color.WHITE, 1.0, 0.0, false)
+	var stripe := Craft.mat(Craft.Kind.TAPE, Color(0.85, 0.85, 0.8) if body_col.get_luminance() < 0.5 else Color(0.2, 0.2, 0.22))
+	var steel := Craft.mat(Craft.Kind.FOIL, Color(0.6, 0.61, 0.63), 0, Color.WHITE, 1.0, 0.0, false)
+	var root := b.solid(pos + Vector3(0, 1.2, 0), Vector3(2.4, 1.6, 6.5), null, yaw)
+	# Chassis and the cargo body (or tank).
+	Craft.box(root, Vector3(0, -0.85, 0.2), Vector3(2.2, 0.3, 6.0), dark)
 	if tank:
-		var tank_m := Craft.mat(Craft.Kind.FOIL, Color(0.85, 0.86, 0.88), 0, Color.WHITE, 1.0, 1.0, false)
-		Craft.part(root, Craft.cylinder(1.05, 1.05, 4.6, 20), tank_m, Vector3(0, 0.75, 0.75), Vector3(PI * 0.5, 0, 0))
-		Craft.box(root, Vector3(0, 0.75, 0.75), Vector3(2.2, 0.25, 4.0), Craft.mat(Craft.Kind.TAPE, Color(0.6, 0.62, 0.64)))
+		var tank_m := Craft.mat(Craft.Kind.FOIL, Color(0.82, 0.83, 0.85), 0, Color.WHITE, 1.0, 1.0, false)
+		Craft.part(root, Craft.cylinder(1.0, 1.0, 4.4, 24), tank_m, Vector3(0, 0.1, 0.9), Vector3(PI * 0.5, 0, 0))
+		for z: float in [-0.9, 0.9, 2.7]:
+			Craft.part(root, Craft.cylinder(1.03, 1.03, 0.08, 24), steel, Vector3(0, 0.1, z), Vector3(PI * 0.5, 0, 0))
+		Craft.box(root, Vector3(0, -0.55, 0.9), Vector3(2.0, 0.3, 4.4), paint)
+		Craft.box(root, Vector3(0, 1.15, 0.9), Vector3(0.6, 0.08, 3.6), steel)
+		Craft.part(root, Craft.cylinder(0.25, 0.25, 0.12, 14), steel, Vector3(0, 1.12, 0.2))
+	else:
+		Craft.box(root, Vector3(0, 0.15, 0.95), Vector3(2.4, 1.9, 4.3), paint)
+		for k in 6:
+			Craft.box(root, Vector3(0, -0.6 + k * 0.32, 3.11), Vector3(2.2, 0.02, 0.02), dark)
+		for sx: float in [-1.0, 1.0]:
+			Craft.box(root, Vector3(sx * 1.205, -0.45, 0.95), Vector3(0.01, 0.12, 4.2), stripe)
+	# Cab.
+	Craft.box(root, Vector3(0, -0.05, -2.35), Vector3(2.3, 1.4, 1.7), paint)
+	Craft.box(root, Vector3(0, 0.35, -3.21), Vector3(1.9, 0.6, 0.02), glass)
+	Craft.box(root, Vector3(0, 0.67, -3.2), Vector3(2.1, 0.06, 0.04), dark)
+	for sx: float in [-1.0, 1.0]:
+		Craft.box(root, Vector3(sx * 1.155, 0.3, -2.45), Vector3(0.02, 0.55, 0.9), glass)
+		Craft.box(root, Vector3(sx * 1.16, -0.1, -1.95), Vector3(0.02, 1.1, 0.02), dark)
+		Craft.box(root, Vector3(sx * 1.16, -0.3, -2.5), Vector3(0.03, 0.03, 0.18), steel)
+		# Mirrors on arms.
+		Craft.box(root, Vector3(sx * 1.3, 0.35, -3.05), Vector3(0.25, 0.03, 0.03), dark)
+		Craft.box(root, Vector3(sx * 1.43, 0.3, -3.05), Vector3(0.05, 0.28, 0.14), dark)
+		# Headlights and tail lights.
+		Craft.box(root, Vector3(sx * 0.8, -0.35, -3.21), Vector3(0.36, 0.18, 0.02), lamp)
+		Craft.box(root, Vector3(sx * 0.95, -0.55, 3.13), Vector3(0.22, 0.14, 0.02), tail)
+		Craft.box(root, Vector3(sx * 1.205, -0.45, -2.35), Vector3(0.01, 0.1, 1.6), stripe)
+	Craft.box(root, Vector3(0, -0.4, -3.22), Vector3(0.9, 0.3, 0.02), dark)
+	for k in 4:
+		Craft.box(root, Vector3(0, -0.5 + k * 0.07, -3.235), Vector3(0.84, 0.02, 0.01), steel)
+	Craft.box(root, Vector3(0, -0.75, -3.25), Vector3(2.35, 0.18, 0.12), dark)
+	Craft.box(root, Vector3(0, -0.75, 3.18), Vector3(2.35, 0.18, 0.12), dark)
+	Craft.part(root, Craft.cylinder(0.1, 0.12, 0.14, 12), amber, Vector3(0, 0.74, -2.4))
+	# Wheels with hubs, under dark fenders.
 	var wheel := Craft.mat(Craft.Kind.PLASTIC, Color(0.1, 0.1, 0.11), 0, Color.WHITE, 1.0, 0.0, false)
-	var hub := Craft.mat(Craft.Kind.PLASTIC, Color(0.55, 0.56, 0.58), 0, Color.WHITE, 1.0, 0.0, false)
+	var hub := Craft.mat(Craft.Kind.FOIL, Color(0.55, 0.56, 0.58), 0, Color.WHITE, 1.0, 0.0, false)
 	for sx: float in [-1.0, 1.0]:
 		for z: float in [-2.2, 1.8]:
 			Craft.part(root, Craft.cylinder(0.5, 0.5, 0.35, 18), wheel, Vector3(sx * 1.1, -0.85, z), Vector3(0, 0, PI * 0.5))
-			Craft.part(root, Craft.cylinder(0.22, 0.22, 0.37, 12), hub, Vector3(sx * 1.1, -0.85, z), Vector3(0, 0, PI * 0.5))
+			Craft.part(root, Craft.cylinder(0.24, 0.24, 0.37, 12), hub, Vector3(sx * 1.1, -0.85, z), Vector3(0, 0, PI * 0.5))
+			Craft.box(root, Vector3(sx * 1.15, -0.32, z), Vector3(0.3, 0.06, 1.15), dark)
+
+
+## A road car (SUV): body, glasshouse with pillars, lights, bumpers,
+## mirrors, roof rails, spare wheel, door seams and handles.
+static func suv(b: MapBuilder, pos: Vector3, yaw: float, col: Color) -> StaticBody3D:
+	var paint := GunBuilder.painted(Craft.Kind.PAPER, col, 0.3, false)
+	var dark := Craft.mat(Craft.Kind.PAPER, Color(0.12, 0.12, 0.13))
+	var glass := Craft.cellophane(Color(0.16, 0.2, 0.24, 0.8))
+	var lamp := Craft.mat(Craft.Kind.GLOW, Color(1.0, 0.95, 0.85), 0, Color.WHITE, 1.0, 0.0, false)
+	var tail := Craft.mat(Craft.Kind.GLOW, Color(0.7, 0.08, 0.06), 0, Color.WHITE, 1.0, 0.0, false)
+	var steel := Craft.mat(Craft.Kind.FOIL, Color(0.62, 0.63, 0.65), 0, Color.WHITE, 1.0, 0.0, false)
+	var body := b.solid(pos + Vector3(0, 0.95, 0), Vector3(2.0, 1.3, 4.7), null, yaw)
+	Craft.box(body, Vector3(0, -0.1, 0), Vector3(1.95, 0.8, 4.6), paint)
+	Craft.box(body, Vector3(0, 0.62, 0.3), Vector3(1.82, 0.62, 2.9), paint)
+	# Glasshouse: windscreen, side windows and rear window between pillars.
+	Craft.box(body, Vector3(0, 0.6, -1.13), Vector3(1.66, 0.52, 0.02), glass, Vector3(-0.35, 0, 0))
+	Craft.box(body, Vector3(0, 0.62, 1.76), Vector3(1.6, 0.48, 0.02), glass)
+	for sx: float in [-1.0, 1.0]:
+		Craft.box(body, Vector3(sx * 0.915, 0.64, 0.3), Vector3(0.02, 0.42, 2.6), glass)
+		for z: float in [-0.35, 0.65, 1.55]:
+			Craft.box(body, Vector3(sx * 0.92, 0.64, z), Vector3(0.03, 0.46, 0.08), dark)
+		Craft.box(body, Vector3(sx * 0.98, -0.05, 0.15), Vector3(0.01, 0.62, 0.02), dark)
+		Craft.box(body, Vector3(sx * 0.98, 0.12, -0.25), Vector3(0.03, 0.03, 0.15), steel)
+		Craft.box(body, Vector3(sx * 0.98, 0.12, 0.6), Vector3(0.03, 0.03, 0.15), steel)
+		Craft.box(body, Vector3(sx * 1.05, 0.45, -1.0), Vector3(0.14, 0.12, 0.06), dark)
+		Craft.box(body, Vector3(sx * 0.65, 0.05, -2.31), Vector3(0.38, 0.14, 0.02), lamp)
+		Craft.box(body, Vector3(sx * 0.75, 0.1, 2.31), Vector3(0.22, 0.2, 0.02), tail)
+		Craft.box(body, Vector3(sx * 0.7, 0.95, 0.3), Vector3(0.05, 0.05, 2.6), steel)
+	Craft.box(body, Vector3(0, -0.05, -2.31), Vector3(0.8, 0.22, 0.02), dark)
+	for k in 3:
+		Craft.box(body, Vector3(0, -0.12 + k * 0.07, -2.32), Vector3(0.74, 0.02, 0.01), steel)
+	Craft.box(body, Vector3(0, -0.42, -2.33), Vector3(1.98, 0.2, 0.12), dark)
+	Craft.box(body, Vector3(0, -0.42, 2.33), Vector3(1.98, 0.2, 0.12), dark)
+	Craft.box(body, Vector3(0, -0.3, -2.4), Vector3(0.5, 0.12, 0.02), Craft.mat(Craft.Kind.PAPER, Color(0.86, 0.85, 0.8)))
+	var tyre := Craft.mat(Craft.Kind.PLASTIC, Color(0.09, 0.09, 0.1), 0, Color.WHITE, 1.0, 0.0, false)
+	var hub := Craft.mat(Craft.Kind.FOIL, Color(0.5, 0.51, 0.53), 0, Color.WHITE, 1.0, 0.0, false)
+	for sx: float in [-1.0, 1.0]:
+		for sz: float in [-1.5, 1.5]:
+			Craft.part(body, Craft.cylinder(0.42, 0.42, 0.3, 18), tyre, Vector3(sx * 0.95, -0.55, sz), Vector3(0, 0, PI * 0.5))
+			Craft.part(body, Craft.cylinder(0.2, 0.2, 0.32, 10), hub, Vector3(sx * 0.95, -0.55, sz), Vector3(0, 0, PI * 0.5))
+	Craft.part(body, Craft.cylinder(0.38, 0.38, 0.24, 18), tyre, Vector3(0, 0.05, 2.45), Vector3(PI * 0.5, 0, 0))
+	return body
 
 
 static func paper_tree(parent: Node3D, pos: Vector3, scale: float, rng: RandomNumberGenerator) -> void:
@@ -162,20 +249,27 @@ static func paper_tree(parent: Node3D, pos: Vector3, scale: float, rng: RandomNu
 
 ## Airport gate seating: a row of linked seats with armrests on a beam.
 static func gate_seats(b: MapBuilder, pos: Vector3, yaw: float, seats: int, col: Color) -> void:
+	# Airport beam seating: a steel beam on two T-legs carrying moulded
+	# seats with fabric pads, backs and armrests between each seat.
 	var w := seats * 0.62
-	var frame := Craft.mat(Craft.Kind.FOIL, Color(0.72, 0.74, 0.78), 0, Color.WHITE, 1.0, 0.0, true)
-	var cushion := Craft.mat(Craft.Kind.FELT, col, Craft.Pattern.STITCH, Craft.CREAM)
+	var steel := Craft.mat(Craft.Kind.FOIL, Color(0.6, 0.62, 0.65), 0, Color.WHITE, 1.0, 0.0, true)
+	var shell := Craft.mat(Craft.Kind.PAPER, Color(0.2, 0.21, 0.23))
+	var pad := Craft.mat(Craft.Kind.FELT, col, Craft.Pattern.STITCH, col.darkened(0.35))
 	var body := b.solid(pos + Vector3(0, 0.25, 0), Vector3(w, 0.5, 0.62), null, yaw)
-	Craft.box(body, Vector3(0, -0.02, 0), Vector3(w + 0.1, 0.06, 0.12), frame)
-	for leg: float in [-w * 0.4, w * 0.4]:
-		Craft.box(body, Vector3(leg, -0.15, 0), Vector3(0.08, 0.2, 0.5), frame)
+	Craft.box(body, Vector3(0, -0.02, 0.02), Vector3(w + 0.06, 0.07, 0.09), steel)
+	for leg: float in [-w * 0.36, w * 0.36]:
+		Craft.box(body, Vector3(leg, -0.13, 0.02), Vector3(0.07, 0.22, 0.07), steel)
+		Craft.box(body, Vector3(leg, -0.235, 0.02), Vector3(0.08, 0.03, 0.56), steel)
 	for i in seats:
 		var x := -w * 0.5 + 0.31 + i * 0.62
-		Craft.box(body, Vector3(x, 0.08, 0.0), Vector3(0.52, 0.12, 0.5), cushion)
-		Craft.box(body, Vector3(x, 0.42, 0.24), Vector3(0.52, 0.56, 0.1), cushion, Vector3(-0.12, 0, 0))
-		Craft.box(body, Vector3(x - 0.31, 0.22, 0.02), Vector3(0.05, 0.05, 0.44), frame)
-		Craft.box(body, Vector3(x - 0.31, 0.11, 0.18), Vector3(0.05, 0.22, 0.05), frame)
-	Craft.box(body, Vector3(w * 0.5, 0.22, 0.02), Vector3(0.05, 0.05, 0.44), frame)
+		Craft.box(body, Vector3(x, 0.06, 0.0), Vector3(0.54, 0.05, 0.5), shell, Vector3(0.06, 0, 0))
+		Craft.box(body, Vector3(x, 0.1, -0.01), Vector3(0.48, 0.05, 0.44), pad, Vector3(0.06, 0, 0))
+		Craft.box(body, Vector3(x, 0.42, 0.25), Vector3(0.54, 0.6, 0.05), shell, Vector3(-0.14, 0, 0))
+		Craft.box(body, Vector3(x, 0.44, 0.215), Vector3(0.46, 0.46, 0.04), pad, Vector3(-0.14, 0, 0))
+	for i in seats + 1:
+		var ax := -w * 0.5 + i * 0.62
+		Craft.box(body, Vector3(ax, 0.26, 0.0), Vector3(0.05, 0.04, 0.44), shell)
+		Craft.box(body, Vector3(ax, 0.14, 0.05), Vector3(0.04, 0.2, 0.04), steel)
 
 
 static func vending(b: MapBuilder, pos: Vector3, yaw: float, col: Color, rng: RandomNumberGenerator) -> void:

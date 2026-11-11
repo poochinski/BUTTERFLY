@@ -39,6 +39,7 @@ func build() -> void:
 	FeltGround.build(self)
 	Handmade.build(self)
 	AirportLife.build(self)
+	_polish()
 	_spawn_points()
 	_bake_navigation()
 
@@ -62,7 +63,8 @@ func _terminal() -> void:
 	var outer := Craft.mat(Craft.Kind.CARDBOARD, Craft.CONCRETE, Craft.Pattern.WALL, Craft.CONCRETE_DARK, 1.0)
 	var inner := Craft.mat(Craft.Kind.CARDBOARD, Color(0.82, 0.8, 0.76), Craft.Pattern.WALL, Color(0.44, 0.47, 0.5), 1.0)
 	var accent := Craft.mat(Craft.Kind.CARDBOARD, Craft.TEAL)
-	var purple := Craft.mat(Craft.Kind.CARDBOARD, Craft.SLATE, Craft.Pattern.STITCH, Color(0.6, 0.62, 0.66))
+	# The mezzanine is laid with carpet tiles.
+	var purple := Craft.mat(Craft.Kind.FELT, Color(0.3, 0.32, 0.36), Craft.Pattern.CHECKER, Color(0.27, 0.29, 0.33), 1.0)
 	var rail_m := Craft.mat(Craft.Kind.CARDBOARD, Color(0.55, 0.57, 0.6))
 
 	b.wall(Vector3(-58, 0, -30), Vector3(-58, 0, 22), 8.0, 0.5, outer)
@@ -272,7 +274,7 @@ func _airliner() -> void:
 		Craft.part(deco, Craft.cylinder(0.55, 0.55, 0.45, 16), tyre, g + Vector3(0, 0.55, 0), Vector3(PI * 0.5, 0, 0))
 
 	# Cabin: rows of felt seats either side of the aisle, a galley mid-way.
-	var seat_m := Craft.mat(Craft.Kind.FELT, Craft.BLUE, Craft.Pattern.STITCH, Craft.CREAM)
+	var seat_m := Craft.mat(Craft.Kind.FELT, Craft.BLUE, Craft.Pattern.STITCH, Craft.BLUE.darkened(0.4))
 	var head_m := Craft.mat(Craft.Kind.FELT, Craft.CREAM)
 	var x := 2.0
 	while x < 30.5:
@@ -701,3 +703,108 @@ func _bake_navigation() -> void:
 	nm.filter_baking_aabb = AABB(Vector3(-60, -1, -40), Vector3(122, 7.5, 68))
 	nav_region.navigation_mesh = nm
 	nav_region.bake_navigation_mesh(false)
+
+
+# ------------------------------------------------------------------ polish
+
+## A detail pass over the spots that read as bare: the baggage hall's
+## walls and ceiling, the mezzanine lounge and the airliner cabin.
+func _polish() -> void:
+	var p := Node3D.new()
+	p.name = "Polish"
+	deco.add_child(p)
+	var steel := Craft.mat(Craft.Kind.FOIL, Color(0.62, 0.63, 0.66), 0, Color.WHITE, 1.0, 0.0, false)
+	var dark := Craft.mat(Craft.Kind.PAPER, Color(0.16, 0.16, 0.18))
+	var yellow := Craft.mat(Craft.Kind.FELT, Craft.YELLOW, 0, Color.WHITE, 1.0, 0.0, false)
+	var red := Craft.mat(Craft.Kind.PAPER, Color(0.62, 0.14, 0.12))
+	var glow := Craft.mat(Craft.Kind.GLOW, Color(1.0, 0.95, 0.85), 0, Color.WHITE, 1.0, 0.0, false)
+
+	# ---- Baggage hall: corrugated cladding ribs on the inside of the
+	# north wall, ducts and cable trays under the roof, caged lights,
+	# walkway lines, extinguishers and belt signs.
+	var ribs := []
+	var x := -13.5
+	while x < 31.6:
+		ribs.append(Transform3D(Basis().scaled(Vector3(0.06, 4.6, 0.05)), Vector3(x, 2.4, -37.77)))
+		x += 0.6
+	FeltGround._multimesh(p, Craft.unit_box(), Craft.mat(Craft.Kind.CARDBOARD, Color(0.46, 0.49, 0.53)), ribs, false)
+	Craft.part(p, Craft.cylinder(0.32, 0.32, 45.0, 16), steel, Vector3(9, 4.45, -36.6), Vector3(0, 0, PI * 0.5))
+	for k in 9:
+		Craft.part(p, Craft.cylinder(0.34, 0.34, 0.06, 16), dark, Vector3(-12 + k * 5.5, 4.45, -36.6), Vector3(0, 0, PI * 0.5))
+		Craft.box(p, Vector3(-12 + k * 5.5, 4.85, -36.6), Vector3(0.04, 0.3, 0.04), dark)
+	Craft.box(p, Vector3(9, 4.55, -28.0), Vector3(45.0, 0.06, 0.4), steel)
+	for k in 12:
+		Craft.box(p, Vector3(-12 + k * 4.0, 4.78, -28.0), Vector3(0.03, 0.45, 0.03), dark)
+	Handmade.cable(p, [Vector3(-13, 4.6, -27.95), Vector3(31, 4.6, -27.95)], Color(0.12, 0.12, 0.14), 0.03)
+	Handmade.cable(p, [Vector3(-13, 4.62, -28.1), Vector3(31, 4.62, -28.1)], Color(0.6, 0.2, 0.15), 0.025)
+	for lx: float in [-6.0, 7.0, 20.0]:
+		Craft.part(p, Craft.torus_ring(0.66, 0.025), dark, Vector3(lx, 4.55, -32), Vector3.ZERO, Vector3(1, 0.6, 1))
+		for a in 4:
+			Craft.box(p, Vector3(lx + cos(a * PI * 0.5) * 0.5, 4.5, -32 + sin(a * PI * 0.5) * 0.5), Vector3(0.02, 0.3, 0.02), dark)
+	# Yellow walkway lines and hatched keep-clear boxes by the doors.
+	for z: float in [-35.0, -30.0]:
+		Craft.box(p, Vector3(9, 0.035, z), Vector3(44.0, 0.01, 0.12), yellow, Vector3.ZERO, false)
+	for dx: float in [-4.0, 10.0, 24.0]:
+		Craft.box(p, Vector3(dx, 0.033, -27.4), Vector3(4.0, 0.01, 2.0), Craft.mat(Craft.Kind.FELT, Craft.YELLOW, Craft.Pattern.HAZARD, Color(0.25, 0.26, 0.28), 1.2), Vector3.ZERO, false)
+	# Extinguishers on red wall boards, an alarm point, and belt numbers.
+	for ex: float in [-12.0, 15.0, 30.0]:
+		Craft.box(p, Vector3(ex, 1.3, -37.74), Vector3(0.5, 0.9, 0.02), red)
+		Craft.part(p, Craft.cylinder(0.09, 0.09, 0.5, 10), red, Vector3(ex, 1.05, -37.6))
+		Craft.part(p, Craft.cylinder(0.03, 0.03, 0.1, 8), dark, Vector3(ex, 1.35, -37.6))
+		Craft.box(p, Vector3(ex + 0.6, 1.5, -37.74), Vector3(0.14, 0.14, 0.05), red)
+	var nums := ["BELT 1", "BELT 2", "BELT 3"]
+	for k in 3:
+		var bx := -6.0 + k * 13.0
+		Craft.box(p, Vector3(bx, 3.6, -34.2), Vector3(1.6, 0.5, 0.06), dark)
+		Craft.box(p, Vector3(bx, 4.35, -34.2), Vector3(0.03, 1.0, 0.03), dark)
+		_label(Vector3(bx, 3.6, -34.16), nums[k], 70, Craft.YELLOW)
+	# A wall clock.
+	Craft.part(p, Craft.cylinder(0.32, 0.32, 0.05, 20), Craft.mat(Craft.Kind.PAPER, Color(0.9, 0.9, 0.88)), Vector3(9, 3.4, -37.74), Vector3(PI * 0.5, 0, 0))
+	Craft.part(p, Craft.torus_ring(0.33, 0.04), dark, Vector3(9, 3.4, -37.72), Vector3(PI * 0.5, 0, 0))
+	Craft.box(p, Vector3(9, 3.48, -37.7), Vector3(0.02, 0.2, 0.01), dark)
+	Craft.box(p, Vector3(9.07, 3.4, -37.7), Vector3(0.15, 0.02, 0.01), dark)
+
+	# ---- Mezzanine lounge (carpet tiles are on the floor material).
+	var felt_chair := Craft.mat(Craft.Kind.FELT, Color(0.42, 0.36, 0.3), Craft.Pattern.STITCH, Color(0.32, 0.27, 0.22))
+	var wood := Craft.mat(Craft.Kind.CARDBOARD, Color(0.55, 0.42, 0.3))
+	for lx: float in [-52.0, -44.0, -36.0, -28.0]:
+		for side: float in [-1.0, 1.0]:
+			var cx := lx + side * 1.0
+			var ch := b.solid(Vector3(cx, 3.35, -25.5), Vector3(0.9, 0.7, 0.9), null, 0.0, false)
+			Craft.box(ch, Vector3(0, -0.12, 0), Vector3(0.85, 0.35, 0.85), felt_chair)
+			Craft.box(ch, Vector3(0, 0.22, 0.36), Vector3(0.85, 0.5, 0.15), felt_chair)
+			for ax: float in [-0.38, 0.38]:
+				Craft.box(ch, Vector3(ax, 0.08, 0), Vector3(0.12, 0.3, 0.85), felt_chair)
+		b.solid(Vector3(lx, 3.25, -24.6), Vector3(0.8, 0.05, 0.6), wood)
+		for sx: float in [-0.35, 0.35]:
+			for sz: float in [-0.25, 0.25]:
+				b.deco_box(Vector3(lx + sx, 3.12, -24.6 + sz), Vector3(0.04, 0.22, 0.04), dark)
+		Craft.part(p, Craft.cylinder(0.05, 0.04, 0.1, 10), Craft.mat(Craft.Kind.PAPER, Color(0.88, 0.87, 0.84)), Vector3(lx + 0.15, 3.33, -24.6))
+	for px: float in [-56.5, -40.0, -24.0]:
+		Props.potted_tree(b, Vector3(px, 3.0, -28.8), rng)
+
+	# ---- Airliner cabin: interior windows, aisle runner, ceiling lights.
+	var zc := -2.0
+	var yc := 4.4
+	var sky := Craft.mat(Craft.Kind.GLOW, Color(0.62, 0.7, 0.76), 0, Color.WHITE, 1.0, 0.0, false)
+	var surround := Craft.mat(Craft.Kind.PAPER, Color(0.74, 0.72, 0.68))
+	for side: float in [-1.0, 1.0]:
+		var wx := 2.0
+		while wx < 31.0:
+			Craft.part(p, Craft.cylinder(0.24, 0.24, 0.02, 14), surround, Vector3(wx, yc + 0.35, zc + side * 2.93), Vector3(PI * 0.5, 0, 0), Vector3(1, 1, 1.35), false)
+			Craft.part(p, Craft.cylinder(0.17, 0.17, 0.02, 14), sky, Vector3(wx, yc + 0.35, zc + side * 2.91), Vector3(PI * 0.5, 0, 0), Vector3(1, 1, 1.35), false)
+			wx += 1.1
+	Craft.box(p, Vector3(16, 3.012, -1.95), Vector3(38, 0.01, 1.7), Craft.mat(Craft.Kind.FELT, Color(0.24, 0.26, 0.32), Craft.Pattern.STITCH, Color(0.17, 0.19, 0.24)), Vector3.ZERO, false)
+	for side: float in [-1.0, 1.0]:
+		Craft.box(p, Vector3(16, 6.22, zc + side * 0.7), Vector3(36, 0.03, 0.12), glow, Vector3.ZERO, false)
+	# Seat dividers: armrests between each of the three seats in a block.
+	var arm := Craft.mat(Craft.Kind.PAPER, Color(0.3, 0.32, 0.36))
+	var sx := 2.0
+	while sx < 30.5:
+		if sx > 14.5 and sx < 17.5:
+			sx += 1.1
+			continue
+		for z: float in [-4.7, -4.13, -3.57, -3.0, -1.0, -0.43, 0.13, 0.7]:
+			Craft.box(p, Vector3(sx, 3.62, z), Vector3(0.45, 0.05, 0.05), arm)
+		sx += 1.1
+

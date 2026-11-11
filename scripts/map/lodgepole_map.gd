@@ -242,8 +242,12 @@ func _ground_color(x: float, z: float, y: float, n: Vector3) -> Color:
 		c = c.lerp(Color(0.42, 0.4, 0.36), 0.7)
 	if Vector2(x, z).distance_to(POND) < 7.5:
 		c = c.lerp(Color(0.34, 0.3, 0.22), 0.6)
-	if _on_pad(x, z, -0.5):
-		c = c.lerp(Color(0.5, 0.48, 0.44), 0.55)
+	# Gravel only where it belongs: the garage apron, helipad surround and
+	# the turnaround. Lawn stays lawn round the lodge and greenhouse.
+	for k: int in [1, 4, 5]:
+		var pd: Array = PADS[k]
+		if absf(x - float(pd[0])) < float(pd[2]) - 0.5 and absf(z - float(pd[1])) < float(pd[3]) - 0.5:
+			c = c.lerp(Color(0.5, 0.48, 0.44), 0.5)
 	return c
 
 
@@ -343,11 +347,11 @@ func _lodge() -> void:
 	var siding := Craft.mat(Craft.Kind.CARDBOARD, Color(0.36, 0.25, 0.17), Craft.Pattern.BANDS, Color(0.29, 0.2, 0.13), 5.0)
 	var stone := Craft.mat(Craft.Kind.PAPER, Color(0.52, 0.51, 0.48), Craft.Pattern.CHECKER, Color(0.43, 0.42, 0.4), 3.0)
 	var plaster := Craft.mat(Craft.Kind.CARDBOARD, Color(0.84, 0.82, 0.77))
-	var floor_m := Craft.mat(Craft.Kind.CARDBOARD, Color(0.55, 0.4, 0.27), Craft.Pattern.FLOOR, Color(0.48, 0.34, 0.22), 0.4)
+	var floor_m := Craft.mat(Craft.Kind.CARDBOARD, Color(0.55, 0.4, 0.27), Craft.Pattern.PLANKS, Color.WHITE, 1.0, 0.0)
 	var roof_m := Craft.mat(Craft.Kind.CARDBOARD, Color(0.2, 0.21, 0.22))
 	var glass := Craft.cellophane(Color(0.55, 0.64, 0.66, 0.24))
 	var frame := Craft.mat(Craft.Kind.PAPER, Color(0.14, 0.14, 0.15))
-	var deck_m := Craft.mat(Craft.Kind.CARDBOARD, Color(0.5, 0.38, 0.26), Craft.Pattern.FLOOR, Color(0.42, 0.31, 0.21), 0.25)
+	var deck_m := Craft.mat(Craft.Kind.CARDBOARD, Color(0.5, 0.39, 0.28), Craft.Pattern.PLANKS, Color.WHITE, 1.3, 0.0)
 
 	# Ground floor slab and walls (outside: cedar siding over a stone plinth).
 	b.span(Vector3(-20, y0 - 0.4, -5), Vector3(0, y0 + 0.1, 7), floor_m)
@@ -415,46 +419,210 @@ func _lodge() -> void:
 	_lodge_interior(y0, y1)
 
 
+## Furniture kit for the lodge: each piece built from card, felt and foil.
+func _legs(at: Vector3, size: Vector2, h: float, m: Material, r := 0.03) -> void:
+	for sx: float in [-1.0, 1.0]:
+		for sz: float in [-1.0, 1.0]:
+			b.deco_box(at + Vector3(sx * (size.x * 0.5 - r), h * 0.5, sz * (size.y * 0.5 - r)), Vector3(r * 2.0, h, r * 2.0), m)
+
+
+func _chair(at: Vector3, yaw: float, wood: Material, pad: Material) -> void:
+	var root := Craft.pivot(deco, at, Vector3(0, yaw, 0))
+	Craft.box(root, Vector3(0, 0.45, 0), Vector3(0.44, 0.05, 0.44), wood)
+	Craft.box(root, Vector3(0, 0.49, 0), Vector3(0.4, 0.04, 0.4), pad)
+	Craft.box(root, Vector3(0, 0.75, 0.2), Vector3(0.44, 0.5, 0.04), wood)
+	for sx: float in [-0.19, 0.19]:
+		for sz: float in [-0.19, 0.19]:
+			Craft.box(root, Vector3(sx, 0.22, sz), Vector3(0.04, 0.45, 0.04), wood)
+
+
+func _sofa(at: Vector3, yaw: float, length: float, felt: Material, cushion: Material, solid := true) -> void:
+	var root := Craft.pivot(deco, at, Vector3(0, yaw, 0))
+	if solid:
+		b.solid(at + Vector3(0, 0.4, 0), Vector3(length, 0.8, 0.95) if absf(sin(yaw)) < 0.5 else Vector3(0.95, 0.8, length), null, 0.0, false)
+	Craft.box(root, Vector3(0, 0.22, 0), Vector3(length, 0.3, 0.9), felt)
+	Craft.box(root, Vector3(0, 0.6, 0.36), Vector3(length, 0.5, 0.2), felt)
+	var n := maxi(int(length / 0.75), 1)
+	for k in n:
+		var x := -length * 0.5 + (k + 0.5) * length / n
+		Craft.box(root, Vector3(x, 0.43, -0.06), Vector3(length / n - 0.04, 0.14, 0.7), cushion)
+		Craft.box(root, Vector3(x, 0.66, 0.22), Vector3(length / n - 0.06, 0.4, 0.14), cushion, Vector3(-0.15, 0, 0))
+	for sx: float in [-1.0, 1.0]:
+		Craft.box(root, Vector3(sx * (length * 0.5 + 0.08), 0.38, 0), Vector3(0.16, 0.5, 0.9), felt)
+
+
+func _frame(at: Vector3, yaw: float, size: Vector2, print_c: Color) -> void:
+	var root := Craft.pivot(deco, at, Vector3(0, yaw, 0))
+	Craft.box(root, Vector3.ZERO, Vector3(size.x + 0.08, size.y + 0.08, 0.03), Craft.mat(Craft.Kind.CARDBOARD, Color(0.16, 0.13, 0.1)))
+	Craft.box(root, Vector3(0, 0, -0.016), Vector3(size.x - 0.04, size.y - 0.04, 0.005), Craft.mat(Craft.Kind.PAPER, Color(0.88, 0.86, 0.8)))
+	# A simple mountain print: two paper peaks over a sky wash.
+	Craft.box(root, Vector3(0, 0.0, -0.02), Vector3(size.x - 0.16, size.y - 0.16, 0.004), Craft.mat(Craft.Kind.PAPER, print_c))
+	var peak := PackedVector2Array([Vector2(-size.x * 0.35, -size.y * 0.3), Vector2(-size.x * 0.05, size.y * 0.2), Vector2(size.x * 0.12, -size.y * 0.05), Vector2(size.x * 0.25, size.y * 0.08), Vector2(size.x * 0.38, -size.y * 0.3)])
+	Craft.part(root, Craft.cutout(peak, 0.004), Craft.mat(Craft.Kind.PAPER, print_c.darkened(0.45)), Vector3(0, 0, -0.024), Vector3(0, PI, 0))
+
+
+func _lamp_pendant(at: Vector3, drop: float, warm: Material, shade: Material) -> void:
+	b.deco_box(at - Vector3(0, drop * 0.5, 0), Vector3(0.012, drop, 0.012), shade)
+	Craft.part(deco, Craft.cylinder(0.06, 0.2, 0.22, 14), shade, at - Vector3(0, drop + 0.1, 0))
+	Craft.part(deco, Craft.sphere(0.07, 8), warm, at - Vector3(0, drop + 0.2, 0), Vector3.ZERO, Vector3.ONE, false)
+
+
 func _lodge_interior(y0: float, y1: float) -> void:
-	var felt_dark := Craft.mat(Craft.Kind.FELT, Color(0.27, 0.28, 0.27), Craft.Pattern.STITCH, Color(0.2, 0.2, 0.2))
+	var felt_sofa := Craft.mat(Craft.Kind.FELT, Color(0.3, 0.33, 0.3), Craft.Pattern.STITCH, Color(0.22, 0.24, 0.22))
+	var cushion := Craft.mat(Craft.Kind.FELT, Color(0.36, 0.38, 0.34))
+	var throw_c := Craft.mat(Craft.Kind.KNIT, Color(0.55, 0.3, 0.22))
 	var wood := Craft.mat(Craft.Kind.CARDBOARD, Color(0.46, 0.33, 0.22))
+	var oak := Craft.mat(Craft.Kind.CARDBOARD, Color(0.6, 0.45, 0.3), Craft.Pattern.PLANKS, Color.WHITE, 0.6, 0.0)
 	var counter := Craft.mat(Craft.Kind.PAPER, Color(0.82, 0.81, 0.78))
+	var cab := Craft.mat(Craft.Kind.PAPER, Color(0.32, 0.36, 0.34))
 	var steel := Craft.mat(Craft.Kind.FOIL, Color(0.62, 0.63, 0.65))
 	var black := Craft.mat(Craft.Kind.PAPER, Color(0.1, 0.1, 0.11))
-	# Kitchen: island, counters along the west wall, a steel fridge.
-	b.solid(Vector3(-15, y0 + 0.5, 1.5), Vector3(3.2, 0.95, 1.2), wood)
-	b.deco_box(Vector3(-15, y0 + 1.0, 1.5), Vector3(3.4, 0.06, 1.3), counter)
-	b.solid(Vector3(-19.4, y0 + 0.5, 1.0), Vector3(0.9, 0.95, 4.0), wood)
-	b.deco_box(Vector3(-19.4, y0 + 1.0, 1.0), Vector3(1.0, 0.06, 4.1), counter)
+	var plaster := Craft.mat(Craft.Kind.CARDBOARD, Color(0.86, 0.85, 0.81))
+	var timber := Craft.mat(Craft.Kind.CARDBOARD, Color(0.62, 0.48, 0.33), Craft.Pattern.PLANKS, Color.WHITE, 0.8, 0.0)
+	var warm := Craft.mat(Craft.Kind.GLOW, Color(1.0, 0.86, 0.66), 0, Color.WHITE, 1.0, 0.0, false)
+	var stone := Craft.mat(Craft.Kind.PAPER, Color(0.5, 0.49, 0.46), Craft.Pattern.CHECKER, Color(0.43, 0.42, 0.4), 3.0)
+	# Ceilings: plaster under the upper floor (around the stairwell), timber
+	# boards under the roof.
+	for c: Array in [[Vector3(-10, y1 - 0.27, 2.1), Vector3(19.6, 0.02, 9.6)], [Vector3(-5.75, y1 - 0.27, -3.9), Vector3(11.1, 0.02, 2.0)]]:
+		b.deco_box(c[0], c[1], plaster, Vector3.ZERO, false)
+	b.deco_box(Vector3(-10, y1 + 2.98, 1), Vector3(19.6, 0.02, 11.6), timber, Vector3.ZERO, false)
+	for xi in range(-19, 0, 3):
+		b.deco_box(Vector3(float(xi), y1 + 2.9, 1), Vector3(0.16, 0.16, 11.6), wood)
+
+	# ---- Kitchen (west half).
+	# Base cabinets with door seams and handles along the west wall.
+	b.solid(Vector3(-19.4, y0 + 0.47, 1.0), Vector3(0.9, 0.94, 4.0), cab)
+	b.deco_box(Vector3(-19.4, y0 + 0.97, 1.0), Vector3(1.0, 0.06, 4.1), counter)
+	for k in 7:
+		var z := -0.7 + k * 0.6
+		b.deco_box(Vector3(-18.94, y0 + 0.5, z - 0.3), Vector3(0.02, 0.8, 0.012), black)
+		b.deco_box(Vector3(-18.93, y0 + 0.78, z), Vector3(0.03, 0.03, 0.16), steel)
+	# Upper cabinets, hob, hood, sink and tap.
+	b.deco_box(Vector3(-19.62, y0 + 1.95, 1.0), Vector3(0.45, 0.75, 4.0), cab)
+	for k in 6:
+		b.deco_box(Vector3(-19.39, y0 + 1.95, -0.65 + k * 0.66), Vector3(0.01, 0.7, 0.01), black)
+	b.deco_box(Vector3(-19.35, y0 + 1.015, 2.2), Vector3(0.6, 0.02, 0.7), black)
+	for r: Vector2 in [Vector2(-0.15, -0.15), Vector2(-0.15, 0.15), Vector2(0.15, -0.15), Vector2(0.15, 0.15)]:
+		Craft.part(deco, Craft.torus_ring(0.08, 0.012), steel, Vector3(-19.35 + r.x, y0 + 1.03, 2.2 + r.y), Vector3.ZERO, Vector3(1, 0.3, 1), false)
+	Craft.part(deco, Craft.cylinder(0.15, 0.42, 0.45, 4), steel, Vector3(-19.45, y0 + 1.95, 2.2), Vector3(0, PI * 0.25, 0))
+	b.deco_box(Vector3(-19.4, y0 + 0.99, -0.2), Vector3(0.5, 0.02, 0.7), steel)
+	b.deco_box(Vector3(-19.7, y0 + 1.15, -0.2), Vector3(0.04, 0.3, 0.04), steel)
+	b.deco_box(Vector3(-19.6, y0 + 1.28, -0.2), Vector3(0.22, 0.03, 0.03), steel)
+	# Fridge with handles.
 	b.solid(Vector3(-19.3, y0 + 1.0, -2.6), Vector3(0.9, 2.0, 1.0), steel)
-	# Dining table and chairs.
-	b.solid(Vector3(-14.5, y0 + 0.4, 5.0), Vector3(2.4, 0.08, 1.1), wood)
-	for x: float in [-15.3, -13.7]:
-		for z: float in [4.2, 5.8]:
-			b.deco_box(Vector3(x, y0 + 0.25, z), Vector3(0.45, 0.5, 0.45), felt_dark)
-	# Living room: L sofa facing the fireplace, rug, coffee table, shelves.
+	b.deco_box(Vector3(-18.83, y0 + 1.25, -2.25), Vector3(0.04, 0.8, 0.04), black)
+	b.deco_box(Vector3(-18.84, y0 + 1.1, -2.6), Vector3(0.01, 0.01, 0.98), black)
+	# Island with a stone top, stools and pendants over it.
+	b.solid(Vector3(-15, y0 + 0.47, 1.5), Vector3(3.2, 0.94, 1.2), cab)
+	b.deco_box(Vector3(-15, y0 + 0.97, 1.5), Vector3(3.4, 0.06, 1.35), counter)
+	for x: float in [-16.1, -15.0, -13.9]:
+		Craft.part(deco, Craft.cylinder(0.2, 0.2, 0.05, 14), felt_sofa, Vector3(x, y0 + 0.72, 2.5))
+		Craft.part(deco, Craft.cylinder(0.025, 0.025, 0.7, 6), steel, Vector3(x, y0 + 0.36, 2.5))
+		Craft.part(deco, Craft.torus_ring(0.16, 0.012), steel, Vector3(x, y0 + 0.28, 2.5), Vector3.ZERO, Vector3(1, 0.3, 1))
+		_lamp_pendant(Vector3(x, y0 + 3.2, 1.5), 1.1, warm, black)
+	# Dining table, chairs, a jug of dried flowers.
+	b.solid(Vector3(-14.5, y0 + 0.74, 5.0), Vector3(2.4, 0.06, 1.1), oak)
+	_legs(Vector3(-14.5, y0, 5.0), Vector2(2.3, 1.0), 0.71, wood, 0.04)
+	for x: float in [-15.2, -13.8]:
+		_chair(Vector3(x, y0, 4.1), 0.0, wood, cushion)
+		_chair(Vector3(x, y0, 5.9), PI, wood, cushion)
+	Craft.part(deco, Craft.cylinder(0.06, 0.08, 0.22, 10), Craft.mat(Craft.Kind.PAPER, Color(0.82, 0.8, 0.74)), Vector3(-14.5, y0 + 0.88, 5.0))
+	for k in 5:
+		b.deco_box(Vector3(-14.5 + (k - 2) * 0.03, y0 + 1.1, 5.0), Vector3(0.012, 0.35, 0.012), Craft.mat(Craft.Kind.FELT, Color(0.62, 0.52, 0.32)), Vector3(0, 0, (k - 2) * 0.15))
+
+	# ---- Living room (east half), round the stone fireplace.
 	Props.rug(deco, Vector3(-4.5, y0 + 0.1, 1.8), Vector2(5.0, 4.0), Color(0.42, 0.38, 0.32))
-	b.solid(Vector3(-7.4, y0 + 0.4, 1.8), Vector3(0.9, 0.8, 3.6), felt_dark)
-	b.solid(Vector3(-5.4, y0 + 0.4, 4.0), Vector3(3.2, 0.8, 0.9), felt_dark)
-	b.solid(Vector3(-4.2, y0 + 0.22, 1.8), Vector3(1.4, 0.44, 0.8), wood)
-	b.solid(Vector3(-8.2, y0 + 1.1, -4.6), Vector3(3.0, 2.2, 0.5), wood)
-	for i in 12:
-		b.deco_box(Vector3(-9.5 + i * 0.22, y0 + 0.5 + (i % 3) * 0.7, -4.4), Vector3(0.16, 0.5, 0.3), Craft.mat(Craft.Kind.PAPER, [Color(0.5, 0.2, 0.18), Color(0.2, 0.28, 0.4), Color(0.75, 0.72, 0.62), Color(0.3, 0.36, 0.28)][i % 4]))
-	# Upstairs office: desks with monitors, a wall map and filing cabinets.
+	_sofa(Vector3(-7.4, y0 + 0.1, 1.8), PI * 0.5, 3.6, felt_sofa, cushion)
+	_sofa(Vector3(-5.2, y0 + 0.1, 4.1), PI, 2.8, felt_sofa, cushion)
+	b.deco_box(Vector3(-7.2, y0 + 0.62, 0.6), Vector3(0.5, 0.06, 0.9), throw_c, Vector3(0, 0, 0.2))
+	# Armchair facing the fire, coffee table with books and a mug.
+	_sofa(Vector3(-3.0, y0 + 0.1, -0.9), 0.6, 1.0, felt_sofa, Craft.mat(Craft.Kind.FELT, Color(0.5, 0.42, 0.32)))
+	b.solid(Vector3(-4.4, y0 + 0.45, 1.8), Vector3(1.4, 0.06, 0.8), oak)
+	_legs(Vector3(-4.4, y0 + 0.1, 1.8), Vector2(1.3, 0.7), 0.32, wood, 0.04)
+	for k in 3:
+		b.deco_box(Vector3(-4.7, y0 + 0.5 + k * 0.035, 1.7), Vector3(0.3, 0.03, 0.22), Craft.mat(Craft.Kind.PAPER, [Color(0.5, 0.2, 0.18), Color(0.2, 0.28, 0.4), Color(0.75, 0.72, 0.62)][k]), Vector3(0, k * 0.2, 0))
+	Craft.part(deco, Craft.cylinder(0.045, 0.045, 0.1, 10), Craft.mat(Craft.Kind.PAPER, Color(0.85, 0.84, 0.8)), Vector3(-4.0, y0 + 0.53, 1.95))
+	# Floor lamp by the sofa.
+	Craft.part(deco, Craft.cylinder(0.15, 0.15, 0.03, 12), black, Vector3(-7.6, y0 + 0.12, 4.1))
+	Craft.part(deco, Craft.cylinder(0.015, 0.015, 1.5, 6), black, Vector3(-7.6, y0 + 0.86, 4.1))
+	Craft.part(deco, Craft.cylinder(0.14, 0.2, 0.28, 14), Craft.mat(Craft.Kind.PAPER, Color(0.9, 0.85, 0.72)), Vector3(-7.6, y0 + 1.66, 4.1))
+	# Hearth, mantel, log basket.
+	b.deco_box(Vector3(-0.6, y0 + 0.15, 1.5), Vector3(0.9, 0.12, 2.4), stone)
+	b.deco_box(Vector3(-0.3, y0 + 1.5, 1.5), Vector3(0.3, 0.1, 2.2), wood)
+	for z: float in [0.8, 1.2, 2.1]:
+		Craft.part(deco, Craft.cylinder(0.035, 0.035, 0.18, 8), Craft.mat(Craft.Kind.PAPER, Color(0.88, 0.86, 0.8)), Vector3(-0.3, y0 + 1.64, z))
+	Craft.part(deco, Craft.cylinder(0.25, 0.22, 0.35, 12), Craft.mat(Craft.Kind.KNIT, Color(0.42, 0.33, 0.22)), Vector3(-0.7, y0 + 0.28, 3.3))
+	for k in 4:
+		Craft.part(deco, Craft.cylinder(0.06, 0.06, 0.5, 8), Craft.mat(Craft.Kind.CARDBOARD, Color(0.42, 0.3, 0.18)), Vector3(-0.7 + (k % 2) * 0.1 - 0.05, y0 + 0.5, 3.3 + (k / 2) * 0.12 - 0.06), Vector3(PI * 0.5, 0.3, 0))
+	# Bookcase on the north wall.
+	b.solid(Vector3(-8.2, y0 + 1.1, -4.65), Vector3(3.0, 2.2, 0.4), wood)
+	for k in 4:
+		b.deco_box(Vector3(-8.2, y0 + 0.3 + k * 0.55, -4.44), Vector3(2.9, 0.03, 0.04), wood)
+		for n in 12:
+			if (n + k) % 5 == 0:
+				continue
+			var bc: Color = [Color(0.5, 0.2, 0.18), Color(0.2, 0.28, 0.4), Color(0.75, 0.72, 0.62), Color(0.3, 0.36, 0.28), Color(0.6, 0.5, 0.3)][(n * 3 + k) % 5]
+			b.deco_box(Vector3(-9.45 + n * 0.21, y0 + 0.48 + k * 0.55, -4.48), Vector3(0.12, 0.3 + (n % 3) * 0.04, 0.24), Craft.mat(Craft.Kind.PAPER, bc))
+	# Prints on the plaster partition.
+	_frame(Vector3(-9.88, y0 + 1.7, -3.0), PI * 0.5, Vector2(0.9, 0.65), Color(0.62, 0.7, 0.74))
+	_frame(Vector3(-9.88, y0 + 1.6, 2.6), PI * 0.5, Vector2(0.6, 0.8), Color(0.74, 0.7, 0.6))
+	# Coat hooks and boots by the back door.
+	b.deco_box(Vector3(-3.6, y0 + 1.7, -4.82), Vector3(1.0, 0.08, 0.03), wood)
+	for k in 3:
+		b.deco_box(Vector3(-3.9 + k * 0.3, y0 + 1.35, -4.75), Vector3(0.22, 0.6, 0.1), Craft.mat(Craft.Kind.FELT, [Color(0.3, 0.34, 0.26), Color(0.5, 0.3, 0.2), Color(0.25, 0.27, 0.32)][k]))
+	for k in 2:
+		b.deco_box(Vector3(-3.9 + k * 0.2, y0 + 0.2, -4.6), Vector3(0.12, 0.3, 0.26), Craft.mat(Craft.Kind.FELT, Color(0.3, 0.22, 0.15)))
+
+	# ---- Upstairs office (east): desks, office chairs, radio, whiteboard.
 	for z: float in [-1.5, 2.5]:
-		b.solid(Vector3(-2.5, y1 + 0.4, z), Vector3(1.6, 0.08, 2.2), wood)
+		b.solid(Vector3(-2.5, y1 + 0.74, z), Vector3(1.6, 0.05, 2.2), oak)
+		_legs(Vector3(-2.5, y1, z), Vector2(1.5, 2.1), 0.72, black, 0.025)
 		for k in 2:
 			var mz := z - 0.5 + k
-			b.deco_box(Vector3(-1.95, y1 + 0.75, mz), Vector3(0.06, 0.5, 0.8), black)
-			b.deco_box(Vector3(-2.0, y1 + 0.75, mz), Vector3(0.02, 0.42, 0.72), Craft.mat(Craft.Kind.GLOW, Color(0.3, 0.42, 0.5)))
-		b.deco_box(Vector3(-3.6, y1 + 0.3, z), Vector3(0.6, 0.6, 0.6), felt_dark)
+			b.deco_box(Vector3(-1.95, y1 + 1.05, mz), Vector3(0.06, 0.5, 0.8), black)
+			b.deco_box(Vector3(-2.0, y1 + 1.05, mz), Vector3(0.02, 0.42, 0.72), Craft.mat(Craft.Kind.GLOW, Color(0.3, 0.42, 0.5)))
+			b.deco_box(Vector3(-2.05, y1 + 0.82, mz), Vector3(0.18, 0.12, 0.12), black)
+		b.deco_box(Vector3(-2.7, y1 + 0.78, z), Vector3(0.2, 0.02, 0.5), black)
+		var ch := Craft.pivot(deco, Vector3(-3.5, y1, z))
+		Craft.box(ch, Vector3(0, 0.48, 0), Vector3(0.5, 0.08, 0.5), black)
+		Craft.box(ch, Vector3(0.24, 0.85, 0), Vector3(0.06, 0.6, 0.46), black)
+		Craft.part(ch, Craft.cylinder(0.03, 0.03, 0.4, 6), steel, Vector3(0, 0.25, 0))
+		for a in 5:
+			Craft.box(ch, Vector3(cos(a * TAU / 5.0) * 0.2, 0.05, sin(a * TAU / 5.0) * 0.2), Vector3(0.04, 0.04, 0.04), black)
+		b.solid(Vector3(-3.5, y1 + 0.5, z), Vector3(0.55, 1.0, 0.55), null, 0.0, false)
+	# Radio set with an antenna, and a whiteboard on the partition.
+	b.deco_box(Vector3(-2.6, y1 + 0.9, 0.5), Vector3(0.4, 0.25, 0.5), Craft.mat(Craft.Kind.PAPER, Color(0.28, 0.31, 0.24)))
+	for k in 3:
+		Craft.part(deco, Craft.cylinder(0.03, 0.03, 0.02, 10), black, Vector3(-2.8, y1 + 0.92, 0.35 + k * 0.15), Vector3(0, 0, PI * 0.5))
+	b.deco_box(Vector3(-2.5, y1 + 1.35, 0.7), Vector3(0.012, 0.7, 0.012), black)
+	b.deco_box(Vector3(-9.88, y1 + 1.5, 4.6), Vector3(0.03, 1.0, 1.8), Craft.mat(Craft.Kind.PAPER, Color(0.9, 0.9, 0.88)))
+	for k in 4:
+		b.deco_box(Vector3(-9.86, y1 + 1.7 - k * 0.15, 4.4 + (k % 2) * 0.2), Vector3(0.005, 0.02, 0.9 - k * 0.12), Craft.mat(Craft.Kind.PAPER, Color(0.2, 0.3, 0.55)))
 	b.deco_box(Vector3(-0.2, y1 + 1.6, 1.0), Vector3(0.04, 1.4, 2.4), Craft.mat(Craft.Kind.PAPER, Color(0.82, 0.8, 0.7), Craft.Pattern.CHECKER, Color(0.74, 0.76, 0.66), 4.0))
 	for z: float in [5.0, 5.8]:
 		b.solid(Vector3(-0.5, y1 + 0.65, z), Vector3(0.7, 1.3, 0.7), steel)
-	# Bedroom: bed, wardrobe, side table.
-	b.solid(Vector3(-17.5, y1 + 0.3, 3.5), Vector3(2.2, 0.6, 2.6), felt_dark)
-	b.deco_box(Vector3(-17.5, y1 + 0.65, 3.0), Vector3(2.1, 0.12, 1.4), Craft.mat(Craft.Kind.FELT, Color(0.72, 0.7, 0.64)))
+		for k in 3:
+			b.deco_box(Vector3(-0.86, y1 + 0.25 + k * 0.42, z), Vector3(0.02, 0.03, 0.3), black)
+	Props.rug(deco, Vector3(-3.5, y1 + 0.02, 0.5), Vector2(3.0, 5.5), Color(0.3, 0.32, 0.36))
+
+	# ---- Bedroom (west): bed with headboard and pillows, nightstands.
+	b.solid(Vector3(-17.5, y1 + 0.25, 3.5), Vector3(2.2, 0.5, 2.6), wood)
+	b.deco_box(Vector3(-17.5, y1 + 0.58, 3.65), Vector3(2.1, 0.16, 2.3), Craft.mat(Craft.Kind.FELT, Color(0.85, 0.84, 0.8)))
+	b.deco_box(Vector3(-17.5, y1 + 0.68, 4.1), Vector3(2.12, 0.08, 1.4), Craft.mat(Craft.Kind.KNIT, Color(0.4, 0.46, 0.5)))
+	for x: float in [-18.0, -17.0]:
+		b.deco_box(Vector3(x, y1 + 0.72, 2.55), Vector3(0.75, 0.14, 0.4), Craft.mat(Craft.Kind.FELT, Color(0.9, 0.89, 0.85)))
+	b.deco_box(Vector3(-17.5, y1 + 0.85, 2.2), Vector3(2.3, 1.2, 0.08), wood)
+	for x: float in [-19.0, -16.0]:
+		b.solid(Vector3(x, y1 + 0.3, 2.4), Vector3(0.5, 0.6, 0.45), wood)
+		Craft.part(deco, Craft.cylinder(0.06, 0.08, 0.3, 10), black, Vector3(x, y1 + 0.75, 2.4))
+		Craft.part(deco, Craft.cylinder(0.1, 0.15, 0.18, 12), Craft.mat(Craft.Kind.PAPER, Color(0.9, 0.85, 0.72)), Vector3(x, y1 + 0.98, 2.4))
+	Props.rug(deco, Vector3(-17.5, y1 + 0.02, 5.4), Vector2(3.0, 1.4), Color(0.52, 0.4, 0.3))
 	b.solid(Vector3(-19.5, y1 + 1.0, -0.5), Vector3(0.7, 2.0, 2.0), wood)
+	b.deco_box(Vector3(-19.14, y1 + 1.0, -0.5), Vector3(0.01, 1.9, 0.02), black)
+	for z: float in [-0.62, -0.38]:
+		b.deco_box(Vector3(-19.13, y1 + 1.0, z), Vector3(0.03, 0.2, 0.03), steel)
+	_frame(Vector3(-19.83, y1 + 1.5, 4.0), -PI * 0.5, Vector2(1.1, 0.7), Color(0.66, 0.72, 0.7))
+
 	# Warm interior light.
 	for p: Vector3 in [Vector3(-5, y0 + 2.8, 1.5), Vector3(-15, y0 + 2.8, 1.5), Vector3(-5, y1 + 2.6, 1.5), Vector3(-15, y1 + 2.6, 2)]:
 		var l := OmniLight3D.new()
@@ -463,7 +631,41 @@ func _lodge_interior(y0: float, y1: float) -> void:
 		l.omni_range = 8.0
 		l.position = p
 		deco.add_child(l)
-		Craft.part(deco, Craft.sphere(0.18, 10), Craft.mat(Craft.Kind.GLOW, Color(1.0, 0.92, 0.78)), p + Vector3(0, 0.15, 0), Vector3.ZERO, Vector3.ONE, false)
+	_lamp_pendant(Vector3(-4.5, y0 + 3.2, 1.8), 0.9, warm, black)
+	_lamp_pendant(Vector3(-5.0, y1 + 3.0, 1.0), 0.6, warm, black)
+	_lamp_pendant(Vector3(-15.0, y1 + 3.0, 2.0), 0.6, warm, black)
+
+	# ---- Outside: deck chairs and table, a grill, planters, wall lights,
+	# downpipes, a propane tank and a satellite dish.
+	var deck_wood := Craft.mat(Craft.Kind.CARDBOARD, Color(0.55, 0.42, 0.3))
+	for x: float in [-4.0, -2.0]:
+		var ac := Craft.pivot(deco, Vector3(x, y0 + 0.12, 9.6), Vector3(0, PI + (x + 3.0) * 0.2, 0))
+		Craft.box(ac, Vector3(0, 0.35, 0), Vector3(0.6, 0.05, 0.6), deck_wood, Vector3(-0.1, 0, 0))
+		Craft.box(ac, Vector3(0, 0.7, 0.33), Vector3(0.6, 0.7, 0.05), deck_wood, Vector3(-0.35, 0, 0))
+		for sx: float in [-0.33, 0.33]:
+			Craft.box(ac, Vector3(sx, 0.55, 0.0), Vector3(0.08, 0.04, 0.75), deck_wood)
+			Craft.box(ac, Vector3(sx, 0.28, -0.25), Vector3(0.05, 0.55, 0.05), deck_wood)
+		b.solid(Vector3(x, y0 + 0.5, 9.6), Vector3(0.7, 0.8, 0.7), null, 0.0, false)
+	b.solid(Vector3(-3.0, y0 + 0.45, 10.5), Vector3(0.6, 0.06, 0.6), deck_wood)
+	_legs(Vector3(-3.0, y0 + 0.12, 10.5), Vector2(0.55, 0.55), 0.33, deck_wood, 0.03)
+	var grill := b.solid(Vector3(-17.5, y0 + 0.62, 10.2), Vector3(1.0, 0.6, 0.6), black)
+	Craft.part(grill, Craft.cylinder(0.3, 0.3, 0.95, 14), black, Vector3(0, 0.32, 0), Vector3(0, 0, PI * 0.5), Vector3(1, 1, 0.9))
+	for sx: float in [-0.4, 0.4]:
+		Craft.box(grill, Vector3(sx, -0.55, 0), Vector3(0.04, 0.5, 0.04), black)
+	for p: Vector3 in [Vector3(-19.4, y0 + 0.12, 8.0), Vector3(-0.6, y0 + 0.12, 8.0)]:
+		Craft.part(deco, Craft.cylinder(0.32, 0.26, 0.55, 12), Craft.mat(Craft.Kind.PAPER, Color(0.32, 0.3, 0.28)), p + Vector3(0, 0.28, 0))
+		Craft.part(deco, Craft.sphere(0.36, 10), Craft.mat(Craft.Kind.FELT, Color(0.26, 0.36, 0.2)), p + Vector3(0, 0.75, 0), Vector3.ZERO, Vector3(1.0, 0.8, 1.0))
+	for p: Vector3 in [Vector3(-7.7, y0 + 2.3, 7.18), Vector3(-5.3, y0 + 2.3, -5.18), Vector3(-20.18, y0 + 2.3, 6.1)]:
+		b.deco_box(p, Vector3(0.14, 0.24, 0.14), black)
+		b.deco_box(p + Vector3(0, -0.02, 0), Vector3(0.1, 0.12, 0.16), warm, Vector3.ZERO, false)
+	for c: Vector3 in [Vector3(-20.2, 0, -5.2), Vector3(0.2, 0, -5.2), Vector3(-20.2, 0, 7.2)]:
+		b.deco_box(Vector3(c.x, y0 + 3.1, c.z), Vector3(0.12, 6.2, 0.12), Craft.mat(Craft.Kind.FOIL, Color(0.3, 0.31, 0.32)))
+	var tank := b.solid(Vector3(-21.6, y0 + 0.55, -2.0), Vector3(0.9, 1.1, 2.0), null, 0.0, false)
+	Craft.part(tank, Craft.capsule(0.45, 2.0), Craft.mat(Craft.Kind.PAPER, Color(0.85, 0.85, 0.82)), Vector3.ZERO, Vector3(PI * 0.5, 0, 0))
+	Craft.part(tank, Craft.cylinder(0.12, 0.12, 0.15, 10), steel, Vector3(0, 0.5, 0))
+	var dish := Craft.pivot(deco, Vector3(0.95, y0 + 6.2, 3.0), Vector3(0, PI * 0.5, 0))
+	Craft.part(dish, Craft.sphere(0.4, 16), Craft.mat(Craft.Kind.PAPER, Color(0.82, 0.82, 0.8)), Vector3(0, 0, 0.3), Vector3.ZERO, Vector3(1.0, 1.0, 0.25))
+	Craft.box(dish, Vector3(0, 0, 0.0), Vector3(0.05, 0.05, 0.6), steel)
 
 
 # ------------------------------------------------------------- outbuildings
@@ -485,11 +687,44 @@ func _garage() -> void:
 	var wood := Craft.mat(Craft.Kind.CARDBOARD, Color(0.5, 0.38, 0.26))
 	b.solid(Vector3(11.4, y + 0.48, -2.6), Vector3(3.6, 0.95, 0.9), wood)
 	b.deco_box(Vector3(11.4, y + 1.8, -2.16), Vector3(3.4, 1.4, 0.05), Craft.mat(Craft.Kind.CARDBOARD, Color(0.62, 0.55, 0.42), Craft.Pattern.DOTS, Color(0.3, 0.26, 0.2), 3.0))
-	var quad := b.solid(Vector3(13.5, y + 0.55, -7.2), Vector3(1.2, 0.8, 2.0), Craft.mat(Craft.Kind.PAPER, Color(0.3, 0.33, 0.24)))
+	# Quad bike: frame, fenders, seat, tank, handlebars, racks, chunky tyres.
+	var quad := b.solid(Vector3(13.5, y + 0.55, -7.2), Vector3(1.2, 0.8, 2.0), null, 0.0, false)
+	var qpaint := GunBuilder.painted(Craft.Kind.PAPER, Color(0.3, 0.33, 0.24), 0.5, false)
 	var tyre := Craft.mat(Craft.Kind.PLASTIC, Color(0.1, 0.1, 0.11))
-	for sx: float in [-0.65, 0.65]:
-		for sz: float in [-0.7, 0.7]:
-			Craft.part(quad, Craft.cylinder(0.3, 0.3, 0.25, 12), tyre, Vector3(sx, -0.25, sz), Vector3(0, 0, PI * 0.5))
+	var qblack := Craft.mat(Craft.Kind.PAPER, Color(0.12, 0.12, 0.13))
+	var qsteel := Craft.mat(Craft.Kind.FOIL, Color(0.55, 0.56, 0.58))
+	Craft.box(quad, Vector3(0, -0.15, 0), Vector3(0.5, 0.25, 1.6), qblack)
+	for sz: float in [-0.65, 0.65]:
+		Craft.box(quad, Vector3(0, 0.08, sz), Vector3(1.25, 0.08, 0.6), qpaint, Vector3(0.12 * signf(sz), 0, 0))
+		Craft.box(quad, Vector3(0, 0.2, sz * 1.15), Vector3(1.0, 0.04, 0.4), qsteel)
+		for sx: float in [-0.6, 0.6]:
+			Craft.part(quad, Craft.cylinder(0.28, 0.28, 0.26, 14), tyre, Vector3(sx, -0.27, sz), Vector3(0, 0, PI * 0.5))
+			Craft.part(quad, Craft.cylinder(0.12, 0.12, 0.28, 8), qsteel, Vector3(sx, -0.27, sz), Vector3(0, 0, PI * 0.5))
+	Craft.box(quad, Vector3(0, 0.12, -0.05), Vector3(0.45, 0.25, 0.55), qpaint)
+	Craft.box(quad, Vector3(0, 0.22, 0.32), Vector3(0.38, 0.12, 0.7), qblack)
+	Craft.box(quad, Vector3(0, 0.38, -0.42), Vector3(0.06, 0.3, 0.06), qblack)
+	Craft.box(quad, Vector3(0, 0.52, -0.45), Vector3(0.75, 0.04, 0.04), qblack)
+	Craft.part(quad, Craft.sphere(0.07, 8), Craft.mat(Craft.Kind.GLOW, Color(1.0, 0.95, 0.85)), Vector3(0, 0.15, -0.95))
+	# Shelving with boxes and tins on the north wall; a strip light.
+	var shelf_w := Craft.mat(Craft.Kind.CARDBOARD, Color(0.5, 0.38, 0.26))
+	b.solid(Vector3(16.3, y + 1.0, -9.55), Vector3(2.0, 2.0, 0.6), null, 0.0, false)
+	for k in 4:
+		b.deco_box(Vector3(16.3, y + 0.15 + k * 0.6, -9.55), Vector3(2.0, 0.04, 0.6), shelf_w)
+		for n in 4:
+			if (n + k) % 3 == 0:
+				Craft.part(deco, Craft.cylinder(0.12, 0.12, 0.25, 10), Craft.mat(Craft.Kind.FOIL, [Color(0.6, 0.18, 0.14), Color(0.62, 0.63, 0.65), Color(0.3, 0.36, 0.3)][n % 3]), Vector3(15.6 + n * 0.45, y + 0.3 + k * 0.6, -9.5))
+			else:
+				b.deco_box(Vector3(15.6 + n * 0.45, y + 0.33 + k * 0.6, -9.5), Vector3(0.38, 0.32, 0.45), Craft.mat(Craft.Kind.CARDBOARD, Craft.KRAFT.darkened(0.1 * (n % 2))))
+	for sx: float in [15.3, 17.3]:
+		for sz: float in [-9.85, -9.25]:
+			b.deco_box(Vector3(sx, y + 1.0, sz), Vector3(0.04, 2.0, 0.04), shelf_w)
+	b.deco_box(Vector3(13.0, y + 3.3, -6.0), Vector3(0.2, 0.06, 2.4), Craft.mat(Craft.Kind.GLOW, Color(0.95, 0.97, 0.95)))
+	var gl := OmniLight3D.new()
+	gl.light_color = Color(0.95, 0.97, 1.0)
+	gl.light_energy = 0.8
+	gl.omni_range = 7.0
+	gl.position = Vector3(13.0, y + 2.9, -6.0)
+	deco.add_child(gl)
 	for i in 3:
 		b.solid(Vector3(16.6, y + 0.3, -9.6 + i * 0.35), Vector3(0.35, 0.6, 0.25), Craft.mat(Craft.Kind.PAPER, Color(0.6, 0.16, 0.13)))
 	for i in 4:
@@ -598,15 +833,7 @@ func _entrance() -> void:
 	_label(Vector3(63.32, sign_y + 1.78, -2.5), "PRIVATE ROAD", 64, Color(0.86, 0.82, 0.7), false, -PI * 0.5)
 	var _unused := board
 	# SUV parked on the turnaround.
-	var sy := height(54.0, 9.0)
-	var suv := b.solid(Vector3(54.0, sy + 0.95, 9.0), Vector3(2.0, 1.3, 4.6), Craft.mat(Craft.Kind.PAPER, Color(0.22, 0.27, 0.24)), 0.3)
-	Craft.box(suv, Vector3(0, 0.95, 0.3), Vector3(1.85, 0.75, 2.8), Craft.mat(Craft.Kind.PAPER, Color(0.22, 0.27, 0.24)))
-	Craft.box(suv, Vector3(0, 0.98, 0.3), Vector3(1.9, 0.5, 2.5), Craft.cellophane(Color(0.2, 0.25, 0.28, 0.6)))
-	var tyre := Craft.mat(Craft.Kind.PLASTIC, Color(0.1, 0.1, 0.11))
-	for sx: float in [-0.95, 0.95]:
-		for sz: float in [-1.5, 1.5]:
-			Craft.part(suv, Craft.cylinder(0.42, 0.42, 0.3, 14), tyre, Vector3(sx, -0.55, sz), Vector3(0, 0, PI * 0.5))
-	Craft.box(suv, Vector3(0, 0.0, -2.31), Vector3(1.4, 0.3, 0.04), Craft.mat(Craft.Kind.FOIL, Color(0.6, 0.61, 0.62)))
+	Props.suv(b, Vector3(54.0, height(54.0, 9.0), 9.0), 0.3, Color(0.2, 0.25, 0.22))
 	# Gatehouse shed.
 	var gy := height(60.0, -8.0)
 	var siding := Craft.mat(Craft.Kind.CARDBOARD, Color(0.36, 0.25, 0.17), Craft.Pattern.BANDS, Color(0.29, 0.2, 0.13), 5.0)
@@ -846,6 +1073,60 @@ func _ground_cover() -> void:
 			grass.append(Transform3D(Basis.from_euler(Vector3(0, rng.randf() * TAU, 0)).scaled(Vector3.ONE * s), Vector3(x, y - 0.02, z)))
 	FeltGround._multimesh(deco, tuft, Craft.mat(Craft.Kind.FELT, Color(0.34, 0.42, 0.22), 0, Color.WHITE, 1.0, 0.0, false), grass, false)
 	FeltGround._multimesh(deco, fern, Craft.mat(Craft.Kind.FELT, Color(0.24, 0.36, 0.18), 0, Color.WHITE, 1.0, 0.0, false), ferns, false)
+	# Shrubs: clumps of felt balls along the forest edges and by buildings.
+	var shrub_m := [Craft.mat(Craft.Kind.FELT, Color(0.22, 0.32, 0.18), 0, Color.WHITE, 1.0, 0.0, false), Craft.mat(Craft.Kind.FELT, Color(0.28, 0.36, 0.2), 0, Color.WHITE, 1.0, 0.0, false)]
+	var shrubs := [[], []]
+	for i in 900:
+		var x := rng.randf_range(-64, 64)
+		var z := rng.randf_range(-44, 44)
+		var f := _forest.get_noise_2d(x, z)
+		if f < -0.15 or f > 0.25 or _on_pad(x, z, 1.5) or _near_path(x, z, 1.6) or absf(z - _creek_z(x)) < 2.5:
+			continue
+		if rng.randf() > 0.25:
+			continue
+		var y := height(x, z)
+		var s0 := rng.randf_range(0.35, 0.7)
+		for k in 4:
+			var o := Vector3(rng.randf_range(-0.5, 0.5), 0, rng.randf_range(-0.5, 0.5)) * s0
+			var sk := s0 * rng.randf_range(0.6, 1.0)
+			shrubs[k % 2].append(Transform3D(Basis().scaled(Vector3(sk, sk * 0.75, sk)), Vector3(x, y + sk * 0.45, z) + o))
+	for k in 2:
+		FeltGround._multimesh(deco, Craft.sphere(1.0, 8), shrub_m[k], shrubs[k], true)
+	# Wildflowers dotted through the meadows: muted whites, yellows, mauve.
+	var fl_cols := [Color(0.88, 0.87, 0.83), Color(0.84, 0.74, 0.36), Color(0.62, 0.55, 0.68)]
+	var flowers := [[], [], []]
+	for i in 1800:
+		var x := rng.randf_range(-64, 64)
+		var z := rng.randf_range(-44, 44)
+		if _forest.get_noise_2d(x, z) > 0.0 or _on_pad(x, z, 0.5) or _near_path(x, z, 1.0):
+			continue
+		var y := height(x, z)
+		flowers[i % 3].append(Transform3D(Basis().scaled(Vector3(0.05, 0.03, 0.05)), Vector3(x, y + 0.2, z)))
+	for k in 3:
+		FeltGround._multimesh(deco, Craft.sphere(1.0, 6), Craft.mat(Craft.Kind.FELT, fl_cols[k], 0, Color.WHITE, 1.0, 0.0, false), flowers[k], false)
+	# Stumps from trees felled for the clearing, and young saplings.
+	var stump_m := Craft.mat(Craft.Kind.CARDBOARD, Color(0.38, 0.28, 0.19), Craft.Pattern.BANDS, Color(0.32, 0.23, 0.15), 4.0)
+	var ring_m := Craft.mat(Craft.Kind.PAPER, Color(0.74, 0.62, 0.45), Craft.Pattern.DOTS, Color(0.62, 0.5, 0.36), 2.0)
+	for i in 30:
+		var x := rng.randf_range(-62, 62)
+		var z := rng.randf_range(-42, 42)
+		if not _clear_spot(x, z):
+			continue
+		var y := height(x, z)
+		var r := rng.randf_range(0.22, 0.4)
+		var st := b.column(Vector3(x, y - 0.05, z), r, 0.45, stump_m)
+		Craft.part(st, Craft.cylinder(r - 0.01, r - 0.01, 0.02, 12), ring_m, Vector3(0, 0.23, 0))
+	var sap := []
+	for i in 60:
+		var x := rng.randf_range(-62, 62)
+		var z := rng.randf_range(-42, 42)
+		if not _clear_spot(x, z) or _forest.get_noise_2d(x, z) < -0.2:
+			continue
+		var y := height(x, z)
+		var h := rng.randf_range(0.8, 1.8)
+		for t in 3:
+			sap.append(Transform3D(Basis().scaled(Vector3(h * 0.3 * (1.0 - t * 0.25), h * 0.4, h * 0.3 * (1.0 - t * 0.25))), Vector3(x, y + h * (0.3 + t * 0.25), z)))
+	FeltGround._multimesh(deco, Craft.cylinder(0.0, 1.0, 1.0, 8), Craft.mat(Craft.Kind.FELT, Color(0.2, 0.3, 0.17), 0, Color.WHITE, 1.0, 0.0, false), sap, true)
 	# Pine cones in the needle litter.
 	var cones := []
 	for i in 300:

@@ -181,7 +181,7 @@ func _process(delta: float) -> void:
 	if _death.visible:
 		_death_l.text = "Folded by %s" % mm.killed_by.display_name if mm.killed_by else "You folded"
 		var r := maxf(0.0, mm.respawn_left)
-		_death_sub.text = "Respawning in %.0f   ·   press Fire to redeploy" % ceil(r) if r < MatchManager.RESPAWN_PLAYER - 1.5 else "Respawning in %.0f" % ceil(r)
+		_death_sub.text = ("Respawning in %.0f   ·   press Fire to redeploy" % ceil(r) if r < MatchManager.RESPAWN_PLAYER - 1.5 else "Respawning in %.0f" % ceil(r)) + "   ·   Esc / Start: change class"
 	var pk := p.near_pickup
 	if pk and p.alive and is_instance_valid(pk):
 		var key := "Hold F" if Game.input_mode == Game.InputMode.KEYBOARD else "Hold X"
@@ -189,9 +189,12 @@ func _process(delta: float) -> void:
 		_prompt.text = "%s to swap for %s   %s" % [key, pk.display_name(), "▮".repeat(fill)]
 	else:
 		_prompt.text = ""
-	_board.visible = (Input.is_action_pressed("scoreboard") and not mm.ended) or mm.ended
-	if _board.visible:
+	var show_board := (Input.is_action_pressed("scoreboard") and not mm.ended) or mm.ended
+	_board_t -= get_process_delta_time()
+	if show_board and (not _board.visible or _board_t <= 0.0):
+		_board_t = 0.5
 		_fill_board()
+	_board.visible = show_board
 	_center.queue_redraw()
 	_minimap.queue_redraw()
 
@@ -266,37 +269,101 @@ func _build_death() -> void:
 
 
 func _build_board() -> void:
+	# Two team cards side by side, each a proper table with aligned columns.
 	_board = PanelContainer.new()
 	_board.set_anchors_preset(Control.PRESET_CENTER)
-	_board.custom_minimum_size = Vector2(1100, 0)
-	_board.position = Vector2(-550, -260)
+	_board.custom_minimum_size = Vector2(1180, 0)
+	_board.position = Vector2(-590, -250)
 	_board.visible = false
+	var bg := StyleBoxFlat.new()
+	bg.bg_color = Color(0.07, 0.09, 0.1, 0.9)
+	bg.set_corner_radius_all(10)
+	bg.set_border_width_all(3)
+	bg.border_color = Color(0.12, 0.07, 0.05)
+	bg.set_content_margin_all(18)
+	_board.add_theme_stylebox_override("panel", bg)
 	root.add_child(_board)
 	var h := HBoxContainer.new()
-	h.add_theme_constant_override("separation", 40)
+	h.add_theme_constant_override("separation", 26)
 	_board.add_child(h)
 	for t in 2:
 		var v := VBoxContainer.new()
 		v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		v.add_theme_constant_override("separation", 4)
+		v.add_theme_constant_override("separation", 2)
 		h.add_child(v)
 		_board_cols.append(v)
+
+
+const BOARD_COLS := [["NAME", 230], ["SCORE", 80], ["K", 46], ["D", 46], ["A", 46], ["STREAK", 70]]
+
+
+func _board_cell(text: String, width: int, col: Color, right: bool, size := 19) -> Label:
+	var l := UIKit.label(text, size, col)
+	l.add_theme_font_override("font", UIKit.BODY_FONT)
+	l.add_theme_constant_override("outline_size", 0)
+	l.custom_minimum_size = Vector2(width, 0)
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT if right else HORIZONTAL_ALIGNMENT_LEFT
+	l.clip_text = true
+	return l
+
+
+var _board_t := 0.0
 
 
 func _fill_board() -> void:
 	for t in 2:
 		var v: VBoxContainer = _board_cols[t]
 		for c in v.get_children():
+			v.remove_child(c)
 			c.queue_free()
-		var head := UIKit.label("%s   %d" % [Game.TEAM_NAMES[t], mm.team_score[t]], 26, Game.TEAM_COLORS[t].lightened(0.45), true)
-		v.add_child(head)
-		v.add_child(UIKit.label("Name                         Score   K   D   A", 16, Color(1, 1, 1, 0.7)))
+		var tc: Color = Game.TEAM_COLORS[t]
+		# Team header: a coloured band with the name and the score.
+		var band := PanelContainer.new()
+		var bs := StyleBoxFlat.new()
+		bs.bg_color = tc.darkened(0.15)
+		bs.set_corner_radius_all(6)
+		bs.set_content_margin_all(8)
+		band.add_theme_stylebox_override("panel", bs)
+		var hb := HBoxContainer.new()
+		band.add_child(hb)
+		var name_l := UIKit.label(Game.TEAM_NAMES[t].to_upper(), 24, UIKit.PAPER, true)
+		name_l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		hb.add_child(name_l)
+		hb.add_child(UIKit.label(str(mm.team_score[t]), 34, UIKit.ACCENT, true))
+		v.add_child(band)
+		# Column titles.
+		var head := HBoxContainer.new()
+		head.add_theme_constant_override("separation", 6)
+		for k in BOARD_COLS.size():
+			var colk: Array = BOARD_COLS[k]
+			head.add_child(_board_cell(colk[0], colk[1], Color(1, 1, 1, 0.55), k > 0, 15))
+		var hp := MarginContainer.new()
+		hp.add_theme_constant_override("margin_left", 10)
+		hp.add_theme_constant_override("margin_top", 6)
+		hp.add_child(head)
+		v.add_child(hp)
+		var i := 0
 		for s in mm.teams_sorted(t):
 			var so: Soldier = s
-			var line := "%-24s %6d %4d %4d %4d" % [so.display_name + ("  (you)" if so == mm.player else ""), so.score, so.kills, so.deaths, so.assists]
-			var l := UIKit.label(line, 20, UIKit.ACCENT if so == mm.player else UIKit.PAPER)
-			l.add_theme_font_override("font", UIKit.BODY_FONT)
-			v.add_child(l)
+			var me := so == mm.player
+			var row_bg := PanelContainer.new()
+			var rs := StyleBoxFlat.new()
+			rs.bg_color = Color(1.0, 0.82, 0.3, 0.22) if me else (Color(1, 1, 1, 0.06) if i % 2 == 0 else Color(1, 1, 1, 0.0))
+			rs.set_corner_radius_all(4)
+			rs.content_margin_left = 10
+			rs.content_margin_top = 3
+			rs.content_margin_bottom = 3
+			row_bg.add_theme_stylebox_override("panel", rs)
+			var row := HBoxContainer.new()
+			row.add_theme_constant_override("separation", 6)
+			row_bg.add_child(row)
+			var col := UIKit.ACCENT if me else (UIKit.PAPER if so.alive else Color(0.75, 0.72, 0.68))
+			var vals := [so.display_name + ("" if so.alive else "   ✕"), str(so.score), str(so.kills), str(so.deaths), str(so.assists), str(so.streak)]
+			for k in BOARD_COLS.size():
+				var colk: Array = BOARD_COLS[k]
+				row.add_child(_board_cell(vals[k], colk[1], col, k > 0))
+			v.add_child(row_bg)
+			i += 1
 
 
 func _build_end() -> void:
@@ -319,7 +386,7 @@ func _on_end(winner: int) -> void:
 	var sub := UIKit.label("%s   ·   %d XP   ·   returning to base…" % [r["name"], int(Game.profile["xp"])], 24)
 	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_end.add_child(sub)
-	_board.position.y = -120
+	_board.position.y = -110
 
 
 # ===================================================================== widgets

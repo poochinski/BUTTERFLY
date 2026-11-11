@@ -171,8 +171,7 @@ static func _yarn(root: Node3D) -> void:
 	var cols := [Color(0.18, 0.18, 0.2), Color(0.84, 0.66, 0.18), Color(0.5, 0.52, 0.55), Color(0.4, 0.4, 0.3), Color(0.82, 0.4, 0.14)]
 	# Floodlight masts and jet bridge legs.
 	for p: Vector3 in [Vector3(0, 0, -24), Vector3(56, 0, -34), Vector3(56, 0, 23), Vector3(14, 0, 23)]:
-		yarn_wrap(root, p, 0.22, 0.5, 1.3, cols[rng.randi() % cols.size()])
-		yarn_wrap(root, p, 0.22, 4.0, 4.35, cols[rng.randi() % cols.size()])
+		yarn_wrap(root, p, 0.22, 0.9, 1.12, cols[rng.randi() % cols.size()])
 	for p: Vector3 in [Vector3(-8, 0, -9), Vector3(-1, 0, -8.8)]:
 		yarn_wrap(root, p, 0.3, 1.2, 2.0, cols[rng.randi() % cols.size()])
 	# Every few fence posts gets a wrap of yarn holding the fence on.

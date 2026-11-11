@@ -130,6 +130,9 @@ func start_match() -> void:
 	pause = PauseMenu.new()
 	add_child(pause)
 	pause.leave_pressed.connect(end_match)
+	pause.class_chosen.connect(func(i):
+		if match_node and match_node.player:
+			match_node.message.emit(match_node.player.change_class(i), Color(0.7, 0.92, 1.0)))
 	_end_t = -1.0
 	match_node.match_ended.connect(func(_w): _end_t = 0.0)
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED

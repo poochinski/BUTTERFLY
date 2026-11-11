@@ -205,6 +205,21 @@ void fragment() {
 		base = mix(base, base * 0.55, trim * 0.5);
 	}
 
+	if (pattern == 10) {
+		// Timber floorboards: long planks in staggered rows, each board a
+		// slightly different tone with fine grain and dark joints.
+		vec2 g = uv / vec2(1.4 * pattern_scale, 0.15 * pattern_scale);
+		float row = floor(g.y);
+		float gx = g.x + c_hash(vec2(row, 7.3)) * 3.0;
+		vec2 f = vec2(fract(gx), fract(g.y));
+		float board = c_hash(vec2(row, floor(gx)));
+		base *= 0.84 + 0.22 * board;
+		base *= 0.94 + 0.08 * c_noise(vec2(gx * 40.0, g.y * 3.0 + board * 9.0));
+		float joint = min(smoothstep(0.0, 0.06, f.y), smoothstep(0.0, 0.06, 1.0 - f.y));
+		float butt = min(smoothstep(0.0, 0.008, f.x), smoothstep(0.0, 0.008, 1.0 - f.x));
+		base *= mix(0.5, 1.0, joint) * mix(0.6, 1.0, butt);
+		h -= (1.0 - joint) * 0.002;
+	}
 	if (pattern == 7) {
 		// Floor made of big painted cardboard panels laid side by side.
 		vec2 g = uv / (2.4 * pattern_scale);

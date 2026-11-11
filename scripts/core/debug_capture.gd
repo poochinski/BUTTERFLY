@@ -67,6 +67,24 @@ func _ready() -> void:
 		main.menu._open_cac()
 	if _opts.has("armory"):
 		_build_armory(int(_opts["armory"]))
+	if _opts.has("view") or _opts.has("tour"):
+		if main.menu:
+			main.menu.visible = false
+	if _opts.has("tour"):
+		# A list of camera views (x,y,z,tx,ty,tz per line), one PNG each.
+		var f := FileAccess.open(String(_opts["tour"]), FileAccess.READ)
+		var views := []
+		while f and not f.eof_reached():
+			var line := f.get_line().strip_edges()
+			if line != "" and not line.begins_with("#"):
+				views.append(line)
+		var cam := Camera3D.new()
+		cam.fov = 70.0
+		get_tree().current_scene.add_child(cam)
+		set_meta("cam", cam)
+		set_meta("tour", views)
+		set_meta("tour_i", 0)
+		set_meta("tour_t", 0.0)
 	if _opts.has("view"):
 		var v := String(_opts["view"]).split(",")
 		var cam := Camera3D.new()
@@ -120,6 +138,10 @@ func _process(delta: float) -> void:
 				"ready":
 					p.streak = 7
 					mn.streaks_ready = {"uav": true, "heli": true, "dogs": true}
+		if _opts.has("classes") and _t > 1.0 and not has_meta("classes_open"):
+			set_meta("classes_open", true)
+			main.pause.open()
+			main.pause._open_classes()
 		if _opts.has("hold_pitch"):
 			p.aim_pitch = float(_opts["pitch"])
 	if _opts.has("banner") and _t > 0.5 and not has_meta("banner_done") and mn:
@@ -129,6 +151,26 @@ func _process(delta: float) -> void:
 		mn.player.streak = 5
 	if has_meta("cam"):
 		(get_meta("cam") as Camera3D).make_current()
+	if has_meta("tour"):
+		var views: Array = get_meta("tour")
+		var i: int = get_meta("tour_i")
+		var tt: float = float(get_meta("tour_t")) + delta
+		set_meta("tour_t", tt)
+		var cam: Camera3D = get_meta("cam")
+		if i < views.size():
+			var v := String(views[i]).split(",")
+			var from := Vector3(float(v[0]), float(v[1]), float(v[2]))
+			var to := Vector3(float(v[3]), float(v[4]), float(v[5]))
+			cam.global_transform = Transform3D(Basis.looking_at(to - from), from)
+			if tt > 1.2:
+				var img := get_viewport().get_texture().get_image()
+				img.save_png("%s_%02d.png" % [String(_opts.get("shot", "/tmp/tour")).trim_suffix(".png"), i])
+				set_meta("tour_i", i + 1)
+				set_meta("tour_t", 0.0)
+		else:
+			print("Tour done: ", views.size())
+			get_tree().quit()
+		return
 	if not _done and _t >= float(_opts.get("wait", "4")):
 		_done = true
 		var img := get_viewport().get_texture().get_image()
