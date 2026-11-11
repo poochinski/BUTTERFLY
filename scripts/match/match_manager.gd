@@ -25,7 +25,7 @@ const UAV_KILLS := 3
 const UAV_TIME := 30.0
 const TEAM_SIZE := 6
 
-var map: GatewayMap
+var map: GameMap
 var player: Player
 var soldiers: Array[Soldier] = []
 var team_score := [0, 0]
@@ -50,7 +50,7 @@ var _uav_angle := 0.0
 var _rank_before := 0
 
 
-func start(m: GatewayMap) -> void:
+func start(m: GameMap) -> void:
 	map = m
 	Fx.root = self
 	_rank_before = int(Game.rank_for(int(Game.profile["xp"]))["index"])

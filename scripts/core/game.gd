@@ -31,7 +31,13 @@ var settings := {
 	"player_name": "You",
 	"fullscreen": false,
 	"graphics": "high",
+	"map": "gateway",
 }
+## Playable maps: id, display name, one-line description.
+const MAPS := [
+	{"id": "gateway", "name": "Gateway", "desc": "papercraft airport"},
+	{"id": "lodgepole", "name": "Lodgepole", "desc": "hillside forest lodge"},
+]
 var profile := {"xp": 0, "kills": 0, "deaths": 0, "wins": 0, "matches": 0}
 
 

@@ -569,7 +569,7 @@ class Minimap:
 		var yaw := p.yaw if p is Player else p.rotation.y
 		draw_set_transform(c, yaw, Vector2.ONE)
 		if texture:
-			var b := GatewayMap.BOUNDS
+			var b := mm.map.bounds
 			draw_texture_rect(texture, Rect2((Vector2(b.position.x, b.position.y) - Vector2(me.x, me.z)) * SCALE, b.size * SCALE), false, Color(1, 1, 1, 0.92))
 		for s in mm.soldiers:
 			if s == p or not s.alive:

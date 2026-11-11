@@ -73,6 +73,25 @@ nearest enemy when you aim down sights.
     (middle).
   - The **open apron** with a business jet (south).
 
+## Map: Lodgepole
+
+An original hillside forest retreat, and the first map with real hills.
+Switch maps with the **MAP** button in the main menu.
+- **West:** Cardstock spawns on the helipad on the high ground, beside
+  the woodshed and its log stacks.
+- **Middle:** a two-storey timber-and-glass lodge on its knoll.
+  - Open-plan kitchen and living room with a stone fireplace.
+  - Stairs up to an office and a bedroom, with a balcony over the deck.
+  - Next to it, a garage workshop; below it, a greenhouse.
+- **North:** a creek gully with two footbridges, crumpled-paper boulders
+  and a hunting stand.
+- **South:** a pond with a dock and an open meadow.
+- **East:** Militia spawns at the gravel turnaround by the gate.
+
+The landscape is layered felt over rolling hills. Pines are stacked felt
+cones on cardboard-tube trunks, and the distant mountains are felt with
+snowcaps. See `docs/lodgepole.jpg`.
+
 ## Environment: felt and hand-made construction
 
 The ground is now felt, laid like a crafter's diorama base: patchwork
@@ -186,7 +205,7 @@ shaders/           craft materials, ink outlines, cellophane, sky
 - [x] **M1:** map, movement, gunplay, 6 weapons, bots, TDM, UAV, HUD, menu
 - [ ] **M2:** more killstreaks (care package, paper airstrike, chopper),
       perks, attachments, create-a-class
-- [ ] **M3:** a second map (trailer-park style) and Domination / FFA modes
+- [ ] **M3:** more maps (Lodgepole done) and Domination / FFA modes
 - [ ] **M4:** music, more sound polish, killcam replay, flash and stun
       grenades
 - [ ] **M5:** graphics settings, a Windows export, performance passes

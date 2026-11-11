@@ -5,12 +5,15 @@ extends CanvasLayer
 
 signal play_pressed
 signal quit_pressed
+signal map_changed
 
 var _root: Control
 var _main: VBoxContainer
 var _settings: SettingsPanel
 var _class_btn: Button
 var _diff_btn: Button
+var _map_btn: Button
+var _map_l: Label
 var _class_desc: Label
 var _rank_l: Label
 var _xp_bar: ProgressBar
@@ -54,6 +57,8 @@ func _ready() -> void:
 	_class_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_class_desc.custom_minimum_size = Vector2(540, 0)
 	_main.add_child(_class_desc)
+	_map_btn = UIKit.button("", _cycle_map)
+	_main.add_child(_map_btn)
 	_diff_btn = UIKit.button("", _cycle_difficulty)
 	_main.add_child(_diff_btn)
 	_main.add_child(UIKit.button("SETTINGS", _open_settings))
@@ -83,7 +88,8 @@ func _ready() -> void:
 	cv.add_child(_xp_bar)
 	_stats_l = UIKit.label("", 20)
 	cv.add_child(_stats_l)
-	cv.add_child(UIKit.label("MAP: GATEWAY — papercraft airport", 20, UIKit.PAPER))
+	_map_l = UIKit.label("", 20, UIKit.PAPER)
+	cv.add_child(_map_l)
 
 	var hint := UIKit.label("Mouse & keyboard or gamepad", 18, Color(1, 1, 1, 0.75))
 	hint.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
@@ -102,6 +108,9 @@ func refresh() -> void:
 	var c: Dictionary = WeaponDB.CLASSES[int(Game.settings["class"])]
 	_class_btn.text = "LOADOUT: " + String(c["name"]).to_upper()
 	_class_desc.text = c["desc"]
+	var md := _map_def()
+	_map_btn.text = "MAP: " + String(md["name"]).to_upper()
+	_map_l.text = "MAP: %s — %s" % [String(md["name"]).to_upper(), md["desc"]]
 	_diff_btn.text = "BOTS: " + String(Game.DIFFICULTIES[int(Game.settings["bot_difficulty"])]).to_upper()
 	var r := Game.rank_for(int(Game.profile["xp"]))
 	_rank_l.text = "%s   (rank %d)" % [r["name"], int(r["index"]) + 1]
@@ -122,6 +131,21 @@ func _cycle_class() -> void:
 	Game.settings["class"] = (int(Game.settings["class"]) + 1) % WeaponDB.CLASSES.size()
 	Game.save_profile()
 	refresh()
+
+
+func _map_def() -> Dictionary:
+	for m in Game.MAPS:
+		if m["id"] == Game.settings.get("map", "gateway"):
+			return m
+	return Game.MAPS[0]
+
+
+func _cycle_map() -> void:
+	var i := Game.MAPS.find(_map_def())
+	Game.settings["map"] = Game.MAPS[(i + 1) % Game.MAPS.size()]["id"]
+	Game.save_profile()
+	refresh()
+	map_changed.emit()
 
 
 func _cycle_difficulty() -> void:
