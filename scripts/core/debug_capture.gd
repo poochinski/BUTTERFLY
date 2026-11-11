@@ -35,6 +35,11 @@ func _ready() -> void:
 			p.yaw = float(_opts["yaw"])
 		if _opts.has("pitch"):
 			p.aim_pitch = float(_opts["pitch"])
+		if _opts.has("pickup"):
+			var pk := WeaponPickup.new()
+			main.match_node.add_child(pk)
+			var fwd0 := Vector3(-sin(p.yaw), 0, -cos(p.yaw))
+			pk.setup(String(_opts["pickup"]), 20, 60, p.global_position + fwd0 * 1.2, 1)
 		if _opts.has("see_enemy"):
 			# Put an enemy bot in plain view, 9 m ahead.
 			for s in main.match_node.soldiers:
@@ -75,6 +80,11 @@ func _process(delta: float) -> void:
 			main.hud.visible = false
 		if _opts.has("hold_pitch"):
 			p.aim_pitch = float(_opts["pitch"])
+	if _opts.has("banner") and _t > 0.5 and not has_meta("banner_done") and mn:
+		set_meta("banner_done", true)
+		mn.banner.emit("5 KILL STREAK", "You're on a roll", Color(1.0, 0.82, 0.25))
+		mn.medal.emit("DOUBLE KILL", 50)
+		mn.player.streak = 5
 	if has_meta("cam"):
 		(get_meta("cam") as Camera3D).make_current()
 	if not _done and _t >= float(_opts.get("wait", "4")):

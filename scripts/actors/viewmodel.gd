@@ -5,7 +5,8 @@ extends Node3D
 ## All motion is procedural: sway, bob, breathing, recoil, aim-down-sights,
 ## sprint, reloads, swaps, knife and grenade throws.
 
-const HIP := Vector3(0.16, -0.19, -0.44)
+const HIP := Vector3(0.15, -0.175, -0.52)
+const HIP_ROT := Vector3(0.0, 0.05, 0.0)
 const SPRINT_POS := Vector3(0.2, -0.27, -0.34)
 const SPRINT_ROT := Vector3(-0.4, 0.95, 0.4)
 
@@ -19,6 +20,7 @@ var _mag: Node3D
 var _mag_rest := Vector3.ZERO
 var _pump: Node3D
 var _sight := Vector3(0, 0.1, 0)
+var _ads_z := -0.28
 
 var _sway := Vector2.ZERO
 var _sway_vel := Vector2.ZERO
@@ -58,6 +60,7 @@ func set_weapon(id: String, color: Color) -> void:
 	_mag_rest = _mag.position
 	_pump = gun.get_meta("pump") if gun.has_meta("pump") else null
 	_sight = gun.get_meta("sight")
+	_ads_z = float(gun.get_meta("ads_z")) if gun.has_meta("ads_z") else -0.28
 	_build_arms()
 	_reload_t = -1.0
 
@@ -68,17 +71,33 @@ func muzzle() -> Node3D:
 
 func _build_arms() -> void:
 	var sleeve := Craft.outlined(Craft.mat(Craft.Kind.FELT, team_color.darkened(0.15), Craft.Pattern.STITCH, Craft.CREAM, 1.0, 0.0, false, true), 0.003, true)
-	var glove := Craft.outlined(Craft.mat(Craft.Kind.FELT, Color(0.24, 0.2, 0.18), 0, Color.WHITE, 1.0, 0.0, false, true), 0.003, true)
+	var glove := Craft.outlined(Craft.mat(Craft.Kind.FELT, Color(0.24, 0.2, 0.18), 0, Color.WHITE, 1.0, 0.0, false, true), 0.0025, true)
+	var knuckle := Craft.mat(Craft.Kind.FELT, Color(0.32, 0.27, 0.24), 0, Color.WHITE, 1.0, 0.0, false, true)
 	var cuff := Craft.mat(Craft.Kind.KNIT, Craft.CREAM, 0, Color.WHITE, 2.0, 0.0, false, true)
-	var right_hand := Vector3(0, -0.035, 0.02)
+	var patch := Craft.mat(Craft.Kind.PAPER, Craft.YELLOW, 0, Color.WHITE, 1.0, 0.0, false, true)
+	var right_hand := Vector3(0, -0.045, 0.012)
 	var left_hand: Vector3 = gun.get_meta("left")
-	_limb(right_hand + Vector3(0.0, -0.02, 0.08), Vector3(0.13, -0.2, 0.32), 0.042, sleeve)
-	_limb(Vector3(0.13, -0.2, 0.32), Vector3(0.24, -0.45, 0.6), 0.055, sleeve)
-	_limb(left_hand + Vector3(-0.02, -0.04, 0.06), Vector3(-0.16, -0.2, 0.0), 0.04, sleeve)
-	_limb(Vector3(-0.16, -0.2, 0.0), Vector3(-0.3, -0.45, 0.4), 0.052, sleeve)
-	Craft.part(gun, Craft.sphere(0.05, 10), glove, right_hand, Vector3.ZERO, Vector3(0.8, 1.0, 1.3), false)
-	Craft.part(gun, Craft.sphere(0.048, 10), glove, left_hand + Vector3(0, -0.02, 0), Vector3.ZERO, Vector3(0.9, 0.9, 1.3), false)
-	Craft.part(gun, Craft.cylinder(0.047, 0.047, 0.03, 10), cuff, right_hand + Vector3(0.0, -0.015, 0.075), Vector3(PI * 0.5, 0, 0), Vector3.ONE, false)
+	# Right arm: forearm up to the grip, upper arm off-screen.
+	_limb(right_hand + Vector3(0.0, -0.03, 0.09), Vector3(0.13, -0.2, 0.32), 0.044, sleeve)
+	_limb(Vector3(0.13, -0.2, 0.32), Vector3(0.24, -0.45, 0.6), 0.056, sleeve)
+	_limb(left_hand + Vector3(-0.025, -0.05, 0.07), Vector3(-0.16, -0.2, 0.0), 0.042, sleeve)
+	_limb(Vector3(-0.16, -0.2, 0.0), Vector3(-0.3, -0.45, 0.4), 0.054, sleeve)
+	# Gloved hands: a palm and four felt fingers curled around the grip.
+	C_hand(right_hand, glove, knuckle, false)
+	C_hand(left_hand + Vector3(0, -0.012, 0), glove, knuckle, true)
+	Craft.part(gun, Craft.cylinder(0.05, 0.05, 0.035, 12), cuff, right_hand + Vector3(0.0, -0.03, 0.085), Vector3(PI * 0.5 - 0.35, 0, 0), Vector3.ONE, false)
+	Craft.part(gun, Craft.cutout(Craft.star_points(0.026, 0.011), 0.003), patch, Vector3(0.1, -0.15, 0.26), Vector3(0.3, PI * 0.5, 0.5), Vector3.ONE, false)
+
+
+## A felt glove: palm, curled fingers and a thumb wrapped round a part.
+func C_hand(at: Vector3, glove: Material, knuckle: Material, support: bool) -> void:
+	Craft.part(gun, Craft.sphere(0.034, 10), glove, at + Vector3(0.018 if not support else -0.02, 0, 0.005), Vector3.ZERO, Vector3(0.7, 1.15, 1.3), false)
+	for i in 4:
+		var y := at.y + 0.022 - i * 0.017
+		var fx := -0.006 if not support else 0.012
+		Craft.part(gun, Craft.capsule(0.0095, 0.05), glove, Vector3(fx, y, at.z - 0.01), Vector3(0, 0, PI * 0.5), Vector3.ONE, false)
+		Craft.part(gun, Craft.sphere(0.0075, 6), knuckle, Vector3(fx + (0.025 if not support else -0.025), y, at.z - 0.01), Vector3.ZERO, Vector3.ONE, false)
+	Craft.part(gun, Craft.capsule(0.01, 0.05), glove, at + Vector3(0.022 if not support else -0.024, 0.03, -0.02), Vector3(0.9, 0, 0.3), Vector3.ONE, false)
 
 
 func _limb(a: Vector3, b: Vector3, r: float, m: Material) -> void:
@@ -159,9 +178,9 @@ func animate(delta: float, look_delta: Vector2, speed: float, on_floor: bool, ad
 	_swap = move_toward(_swap, _swap_target, delta * 5.0)
 	_land = move_toward(_land, 0.0, delta * 4.0)
 
-	var ads_pos := Vector3(-_sight.x, -_sight.y, -0.28)
+	var ads_pos := Vector3(-_sight.x, -_sight.y, _ads_z)
 	var pos := HIP.lerp(ads_pos, ads)
-	var rot := Vector3.ZERO
+	var rot := HIP_ROT.lerp(Vector3.ZERO, ads)
 	pos = pos.lerp(SPRINT_POS, sprint)
 	rot = rot.lerp(SPRINT_ROT, sprint)
 	pos += bob + breathe

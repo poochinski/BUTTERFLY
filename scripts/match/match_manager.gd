@@ -13,6 +13,9 @@ signal message(text: String, color: Color)
 signal score_changed
 signal match_ended(winner: int)
 signal uav_changed
+## Big ribbon banner (killstreaks) and small medal splashes (double kill...).
+signal banner(title: String, subtitle: String, color: Color)
+signal medal(text: String, xp: int)
 
 const SCORE_LIMIT := 75
 const TIME_LIMIT := 600.0
@@ -35,6 +38,11 @@ var last_fired := {}  # Soldier -> time
 var killed_by: Soldier
 var respawn_left := 0.0
 var clock := 0.0
+var first_blood := false
+var killed_by_last: Soldier
+var _multi := 0
+var _last_kill_t := -100.0
+var _deaths_since_kill := 0
 
 var _respawns := {}  # Soldier -> seconds remaining
 var _uav_plane: Node3D
@@ -174,14 +182,10 @@ func _on_died(victim: Soldier, killer: Soldier, weapon_id: String, headshot: boo
 		score_changed.emit()
 		if killer == player:
 			xp_event.emit(100, "Enemy down")
-			if headshot:
-				xp_event.emit(50, "Headshot")
 			Game.profile["kills"] = int(Game.profile["kills"]) + 1
-			_award(100 + (50 if headshot else 0))
-			if killer.streak == UAV_KILLS:
-				uav_ready = true
-				Sfx.play_ui("streak_ready")
-				message.emit("UAV READY — press 5 / D-pad Up", Color(1, 0.85, 0.3))
+			_award(100)
+			_player_medals(victim, weapon_id, headshot)
+			_streak_banner(killer.streak)
 		elif killer is Bot and killer.streak == UAV_KILLS:
 			_call_uav(killer.team, killer)
 	for a in victim.attackers.keys():
@@ -192,9 +196,14 @@ func _on_died(victim: Soldier, killer: Soldier, weapon_id: String, headshot: boo
 			if att == player:
 				xp_event.emit(20, "Assist")
 				_award(20)
+	if valid_kill and not first_blood:
+		first_blood = true
+	_drop_weapon(victim)
 	if victim == player:
+		_deaths_since_kill += 1
 		player.vm.visible = false
 		killed_by = killer if killer != player else null
+		killed_by_last = killed_by
 		Game.profile["deaths"] = int(Game.profile["deaths"]) + 1
 		_respawns[victim] = RESPAWN_PLAYER
 		respawn_left = RESPAWN_PLAYER
@@ -202,6 +211,77 @@ func _on_died(victim: Soldier, killer: Soldier, weapon_id: String, headshot: boo
 		_respawns[victim] = RESPAWN_BOT
 	if team_score[0] >= SCORE_LIMIT or team_score[1] >= SCORE_LIMIT:
 		_end_match(0 if team_score[0] >= SCORE_LIMIT else 1)
+
+
+func _player_medals(victim: Soldier, weapon_id: String, headshot: bool) -> void:
+	var give := func(text: String, xp: int):
+		medal.emit(text, xp)
+		_award(xp)
+	if not first_blood:
+		give.call("FIRST BLOOD", 100)
+	if headshot:
+		give.call("HEADSHOT", 50)
+	if weapon_id == "knife":
+		give.call("PAPER CUT!", 50)
+	elif weapon_id == "frag":
+		give.call("CONFETTI BOMB", 50)
+	if victim == killed_by_last:
+		give.call("PAYBACK", 50)
+		killed_by_last = null
+	if _deaths_since_kill >= 4:
+		give.call("COMEBACK", 75)
+	_deaths_since_kill = 0
+	var dist := player.global_position.distance_to(victim.global_position)
+	if dist > 38.0 and weapon_id != "knife":
+		give.call("LONGSHOT", 50)
+	if clock - _last_kill_t < 3.5:
+		_multi += 1
+	else:
+		_multi = 1
+	_last_kill_t = clock
+	match _multi:
+		2:
+			give.call("DOUBLE KILL", 50)
+		3:
+			give.call("TRIPLE KILL", 75)
+		4:
+			give.call("FURY KILL", 100)
+		5, 6, 7, 8:
+			give.call("PAPER SHREDDER", 150)
+
+
+func _streak_banner(n: int) -> void:
+	var titles := {
+		3: ["3 KILL STREAK", "UAV READY  —  press 5 / D-pad Up"],
+		5: ["5 KILL STREAK", "You're on a roll"],
+		7: ["7 KILL STREAK", "A cut above the rest"],
+		10: ["10 KILL STREAK", "UNSTOPPABLE"],
+		15: ["15 KILL STREAK", "ORIGAMI LEGEND"],
+		20: ["20 KILL STREAK", "THE WHOLE CRAFT BOX"],
+	}
+	if n == UAV_KILLS:
+		uav_ready = true
+	if titles.has(n):
+		var t: Array = titles[n]
+		banner.emit(t[0], t[1], Color(1.0, 0.82, 0.25) if n < 10 else Color(1.0, 0.45, 0.35))
+		Sfx.play_ui("streak_ready")
+		_award(n * 25)
+		xp_event.emit(n * 25, "Kill streak")
+	elif n > 20 and n % 5 == 0:
+		banner.emit("%d KILL STREAK" % n, "Somebody stop them", Color(1.0, 0.45, 0.35))
+		Sfx.play_ui("streak_ready")
+
+
+func _drop_weapon(victim: Soldier) -> void:
+	var w := victim.weapon()
+	if w.mag + w.reserve <= 0:
+		return
+	var p := WeaponPickup.new()
+	add_child(p)
+	p.setup(w.id, w.mag, w.reserve, victim.global_position, victim.team)
+	var all := get_tree().get_nodes_in_group("pickups")
+	if all.size() > 14:
+		all[0].queue_free()
 
 
 func _award(xp: int) -> void:

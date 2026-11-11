@@ -27,6 +27,10 @@ var _death_sub: Label
 var _board: Control
 var _board_cols: Array = []
 var _end: Control
+var _banner: Banner
+var _medals: VBoxContainer
+var _prompt: Label
+var _streak_track: StreakTrack
 
 
 func setup(m: MatchManager) -> void:
@@ -107,6 +111,40 @@ func setup(m: MatchManager) -> void:
 	_build_board()
 	_build_end()
 
+	_banner = Banner.new()
+	_banner.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	_banner.position = Vector2(-420, 70)
+	_banner.size = Vector2(840, 170)
+	_banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(_banner)
+
+	_medals = VBoxContainer.new()
+	_medals.set_anchors_preset(Control.PRESET_CENTER)
+	_medals.position = Vector2(-200, -230)
+	_medals.custom_minimum_size = Vector2(400, 0)
+	_medals.alignment = BoxContainer.ALIGNMENT_END
+	_medals.add_theme_constant_override("separation", 2)
+	root.add_child(_medals)
+
+	_prompt = UIKit.label("", 26, UIKit.PAPER, true, 8)
+	_prompt.set_anchors_preset(Control.PRESET_CENTER)
+	_prompt.position = Vector2(-400, 150)
+	_prompt.size = Vector2(800, 40)
+	_prompt.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	root.add_child(_prompt)
+
+	_streak_track = StreakTrack.new()
+	_streak_track.hud = self
+	_streak_track.set_anchors_preset(Control.PRESET_CENTER_RIGHT)
+	_streak_track.position = Vector2(-110, -120)
+	_streak_track.size = Vector2(90, 240)
+	_streak_track.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(_streak_track)
+
+	mm.banner.connect(func(t, s2, c): _banner.show_banner(t, s2, c))
+	mm.medal.connect(_on_medal)
+	mm.player.ammo_scavenged.connect(func(n): _on_xp(0, "+%d ammo" % n) if n > 0 else null)
+
 	mm.kill_event.connect(_on_kill)
 	mm.xp_event.connect(_on_xp)
 	mm.message.connect(_on_message)
@@ -144,6 +182,13 @@ func _process(delta: float) -> void:
 		_death_l.text = "Folded by %s" % mm.killed_by.display_name if mm.killed_by else "You folded"
 		var r := maxf(0.0, mm.respawn_left)
 		_death_sub.text = "Respawning in %.0f   ·   press Fire to redeploy" % ceil(r) if r < MatchManager.RESPAWN_PLAYER - 1.5 else "Respawning in %.0f" % ceil(r)
+	var pk := p.near_pickup
+	if pk and p.alive and is_instance_valid(pk):
+		var key := "Hold F" if Game.input_mode == Game.InputMode.KEYBOARD else "Hold X"
+		var fill := int(p.use_hold / Player.USE_HOLD_TIME * 10.0)
+		_prompt.text = "%s to swap for %s   %s" % [key, pk.display_name(), "▮".repeat(fill)]
+	else:
+		_prompt.text = ""
 	_board.visible = (Input.is_action_pressed("scoreboard") and not mm.ended) or mm.ended
 	if _board.visible:
 		_fill_board()
@@ -179,6 +224,23 @@ func _on_xp(amount: int, reason: String) -> void:
 	tw.tween_interval(1.6)
 	tw.tween_property(l, "modulate:a", 0.0, 0.5)
 	tw.tween_callback(l.queue_free)
+
+
+func _on_medal(text: String, xp: int) -> void:
+	var l := UIKit.label("%s   +%d" % [text, xp], 34, Color(1.0, 0.92, 0.55), true, 10)
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	l.custom_minimum_size = Vector2(400, 0)
+	_medals.add_child(l)
+	l.pivot_offset = Vector2(200, 22)
+	l.scale = Vector2(1.8, 1.8)
+	l.modulate.a = 0.0
+	var tw := l.create_tween()
+	tw.tween_property(l, "scale", Vector2.ONE, 0.22).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.parallel().tween_property(l, "modulate:a", 1.0, 0.12)
+	tw.tween_interval(1.8)
+	tw.tween_property(l, "modulate:a", 0.0, 0.4)
+	tw.tween_callback(l.queue_free)
+	Sfx.play_ui("hit_kill", -4.0)
 
 
 func _on_message(text: String, color: Color) -> void:
@@ -358,6 +420,129 @@ class CenterOverlay:
 		draw_line(c - Vector2(0, r), c - Vector2(0, 14), ink, 3.0, true)
 		draw_line(c + Vector2(0, 14), c + Vector2(0, r), ink, 3.0, true)
 		draw_circle(c, 3.0, Color(0.9, 0.15, 0.1))
+
+
+class Banner:
+	extends Control
+	## A felt ribbon that drops in with a bounce, its tails folded behind,
+	## edged with stitches, for killstreaks.
+
+	var _title := ""
+	var _sub := ""
+	var _color := Color(1.0, 0.82, 0.25)
+	var _t := -1.0
+	var _queue: Array = []
+	const DURATION := 3.2
+
+	func show_banner(title: String, sub: String, color: Color) -> void:
+		_queue.append([title, sub, color])
+		if _t < 0.0:
+			_next()
+
+	func _next() -> void:
+		if _queue.is_empty():
+			_t = -1.0
+			visible = false
+			return
+		var b: Array = _queue.pop_front()
+		_title = b[0]
+		_sub = b[1]
+		_color = b[2]
+		_t = 0.0
+		visible = true
+
+	func _process(delta: float) -> void:
+		if _t < 0.0:
+			return
+		_t += delta
+		if _t > DURATION:
+			_next()
+		queue_redraw()
+
+	func _draw() -> void:
+		if _t < 0.0:
+			return
+		var drop := clampf(_t / 0.35, 0.0, 1.0)
+		var bounce := 1.0 - pow(1.0 - drop, 3.0) + sin(drop * PI) * 0.08
+		var out := clampf((_t - (DURATION - 0.35)) / 0.35, 0.0, 1.0)
+		var y_off := (1.0 - bounce) * -140.0 - out * 160.0
+		var alpha := 1.0 - out
+		var w := size.x
+		var h := 110.0
+		var top := 20.0 + y_off
+		var ribbon := _color.darkened(0.1)
+		var tail := _color.darkened(0.45)
+		var ink := Color(0.12, 0.07, 0.05, alpha)
+		# Folded tails behind the main ribbon.
+		for side: float in [-1.0, 1.0]:
+			var x0 := w * 0.5 + side * (w * 0.5 - 40.0)
+			var x1 := x0 + side * 90.0
+			var pts := PackedVector2Array([Vector2(x0, top + 22), Vector2(x1, top + 22), Vector2(x1 - side * 30.0, top + 22 + h * 0.5), Vector2(x1, top + 22 + h), Vector2(x0, top + 22 + h)])
+			draw_colored_polygon(pts, Color(tail.r, tail.g, tail.b, alpha))
+			draw_polyline(pts + PackedVector2Array([pts[0]]), ink, 4.0, true)
+		var body := Rect2(Vector2(40.0, top), Vector2(w - 80.0, h))
+		draw_rect(body.grow(4), ink)
+		draw_rect(body, Color(ribbon.r, ribbon.g, ribbon.b, alpha))
+		draw_rect(Rect2(body.position + Vector2(0, h * 0.62), Vector2(body.size.x, h * 0.38)), Color(0, 0, 0, 0.12 * alpha))
+		UIKit.draw_stitches(self, body, Color(1, 0.97, 0.88, 0.9 * alpha), 10.0, 14.0, 9.0, 3.0)
+		var font := UIKit.TITLE_FONT
+		var fs := 62
+		var tw := font.get_string_size(_title, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+		var pos := Vector2(w * 0.5 - tw * 0.5, top + 68)
+		draw_string_outline(font, pos, _title, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 14, ink)
+		draw_string(font, pos, _title, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(1, 0.98, 0.92, alpha))
+		var sfs := 26
+		var sw := font.get_string_size(_sub, HORIZONTAL_ALIGNMENT_LEFT, -1, sfs).x
+		var spos := Vector2(w * 0.5 - sw * 0.5, top + h + 44)
+		draw_string_outline(font, spos, _sub, HORIZONTAL_ALIGNMENT_LEFT, -1, sfs, 10, ink)
+		draw_string(font, spos, _sub, HORIZONTAL_ALIGNMENT_LEFT, -1, sfs, Color(1, 0.9, 0.55, alpha))
+		# Paper stars popping out on arrival.
+		if _t < 0.9:
+			var k := _t / 0.9
+			for i in 8:
+				var a := TAU * i / 8.0 + 0.3
+				var c := Vector2(w * 0.5, top + h * 0.5) + Vector2(cos(a) * (w * 0.3 + k * 120.0), sin(a) * (40.0 + k * 90.0))
+				_star(c, 14.0 * (1.0 - k) + 4.0, Color(1, 0.9, 0.4, (1.0 - k) * alpha))
+
+	func _star(c: Vector2, r: float, col: Color) -> void:
+		var pts := PackedVector2Array()
+		for i in 10:
+			var a := -PI * 0.5 + PI * i / 5.0
+			pts.append(c + Vector2(cos(a), sin(a)) * (r if i % 2 == 0 else r * 0.45))
+		draw_colored_polygon(pts, col)
+
+
+class StreakTrack:
+	extends Control
+	## Current kill streak and the pips toward the next reward.
+
+	var hud: HUD
+
+	func _process(_d: float) -> void:
+		queue_redraw()
+
+	func _draw() -> void:
+		var p := hud.mm.player
+		if p == null or not p.alive:
+			return
+		var n := p.streak
+		var ink := Color(0.12, 0.07, 0.05, 0.9)
+		var x := size.x * 0.5
+		for i in MatchManager.UAV_KILLS:
+			var c := Vector2(x, size.y - 30.0 - i * 34.0)
+			draw_circle(c, 13.0, ink)
+			var filled := i < n
+			draw_circle(c, 10.0, UIKit.ACCENT if filled else Color(1, 1, 1, 0.18))
+		var top := Vector2(x, size.y - 30.0 - MatchManager.UAV_KILLS * 34.0 - 6.0)
+		var label := "UAV" if not hud.mm.uav_ready else "UAV!"
+		var fw := UIKit.TITLE_FONT.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, 22).x
+		draw_string_outline(UIKit.TITLE_FONT, top + Vector2(-fw * 0.5, 0), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 22, 8, ink)
+		draw_string(UIKit.TITLE_FONT, top + Vector2(-fw * 0.5, 0), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color(0.7, 0.9, 1.0) if hud.mm.uav_ready else UIKit.PAPER)
+		if n > 0:
+			var s := "x%d" % n
+			var sw := UIKit.TITLE_FONT.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, 30).x
+			draw_string_outline(UIKit.TITLE_FONT, Vector2(x - sw * 0.5, size.y + 10), s, HORIZONTAL_ALIGNMENT_LEFT, -1, 30, 8, ink)
+			draw_string(UIKit.TITLE_FONT, Vector2(x - sw * 0.5, size.y + 10), s, HORIZONTAL_ALIGNMENT_LEFT, -1, 30, UIKit.ACCENT)
 
 
 class Minimap:

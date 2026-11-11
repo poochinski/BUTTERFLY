@@ -17,7 +17,7 @@ const DATA := {
 		"mag": 30, "reserve": 150, "reload": 2.2, "reload_empty": 2.8,
 		"spread": [3.2, 0.12], "recoil": [0.55, 0.32], "ads_fov": 50.0, "ads_time": 0.24,
 		"head_mult": 1.4, "move": 1.0, "pellets": 1, "range": 200.0,
-		"model": "rifle", "body": Color(0.32, 0.33, 0.36), "trim": Color(0.8, 0.62, 0.42), "sound": "rifle",
+		"model": "rifle", "body": Color(0.46, 0.5, 0.58), "trim": Color(0.82, 0.62, 0.4), "sound": "rifle",
 	},
 	"ak": {
 		"name": "AK-47", "class": "Assault Rifle", "slot": 0,
@@ -25,7 +25,7 @@ const DATA := {
 		"mag": 30, "reserve": 150, "reload": 2.4, "reload_empty": 3.0,
 		"spread": [3.6, 0.15], "recoil": [0.8, 0.5], "ads_fov": 50.0, "ads_time": 0.27,
 		"head_mult": 1.4, "move": 0.95, "pellets": 1, "range": 200.0,
-		"model": "ak", "body": Color(0.3, 0.27, 0.25), "trim": Color(0.7, 0.42, 0.22), "sound": "rifle_heavy",
+		"model": "ak", "body": Color(0.44, 0.42, 0.42), "trim": Color(0.86, 0.48, 0.22), "sound": "rifle_heavy",
 	},
 	"smg": {
 		"name": "PDW-9", "class": "Submachine Gun", "slot": 0,
@@ -33,7 +33,7 @@ const DATA := {
 		"mag": 32, "reserve": 160, "reload": 1.9, "reload_empty": 2.4,
 		"spread": [2.4, 0.2], "recoil": [0.42, 0.42], "ads_fov": 55.0, "ads_time": 0.18,
 		"head_mult": 1.25, "move": 1.07, "pellets": 1, "range": 120.0,
-		"model": "smg", "body": Color(0.28, 0.3, 0.35), "trim": Color(0.25, 0.55, 0.8), "sound": "smg",
+		"model": "smg", "body": Color(0.4, 0.46, 0.56), "trim": Color(0.3, 0.6, 0.85), "sound": "smg",
 	},
 	"sniper": {
 		"name": "Longbow .50", "class": "Sniper Rifle", "slot": 0,
@@ -41,7 +41,7 @@ const DATA := {
 		"mag": 5, "reserve": 25, "reload": 3.0, "reload_empty": 3.6,
 		"spread": [9.0, 0.0], "recoil": [3.5, 0.6], "ads_fov": 16.0, "ads_time": 0.38,
 		"head_mult": 1.5, "chest_mult": 1.5, "move": 0.9, "pellets": 1, "range": 400.0, "scope": true, "bolt": true,
-		"model": "sniper", "body": Color(0.34, 0.42, 0.3), "trim": Color(0.8, 0.62, 0.42), "sound": "sniper",
+		"model": "sniper", "body": Color(0.42, 0.52, 0.36), "trim": Color(0.84, 0.66, 0.42), "sound": "sniper",
 	},
 	"shotgun": {
 		"name": "Pump-12", "class": "Shotgun", "slot": 1,
@@ -49,7 +49,7 @@ const DATA := {
 		"mag": 6, "reserve": 24, "reload": 3.2, "reload_empty": 3.6,
 		"spread": [5.5, 4.0], "recoil": [2.6, 0.8], "ads_fov": 58.0, "ads_time": 0.22,
 		"head_mult": 1.0, "move": 1.0, "pellets": 8, "range": 40.0, "pump": true,
-		"model": "shotgun", "body": Color(0.28, 0.24, 0.22), "trim": Color(0.75, 0.5, 0.3), "sound": "shotgun",
+		"model": "shotgun", "body": Color(0.42, 0.38, 0.36), "trim": Color(0.82, 0.54, 0.3), "sound": "shotgun",
 	},
 	"pistol": {
 		"name": "M9", "class": "Pistol", "slot": 1,
@@ -57,7 +57,7 @@ const DATA := {
 		"mag": 15, "reserve": 60, "reload": 1.6, "reload_empty": 2.0,
 		"spread": [2.2, 0.3], "recoil": [1.1, 0.5], "ads_fov": 58.0, "ads_time": 0.15,
 		"head_mult": 1.4, "move": 1.1, "pellets": 1, "range": 80.0,
-		"model": "pistol", "body": Color(0.25, 0.25, 0.28), "trim": Color(0.6, 0.6, 0.64), "sound": "pistol",
+		"model": "pistol", "body": Color(0.4, 0.42, 0.48), "trim": Color(0.7, 0.5, 0.3), "sound": "pistol",
 	},
 }
 

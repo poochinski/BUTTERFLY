@@ -7,6 +7,7 @@ extends Soldier
 
 signal hit_confirmed(headshot: bool, kill: bool)
 signal streak_used(kind: String)
+signal ammo_scavenged(amount: int)
 
 const WALK := 4.8
 const SPRINT_MULT := 1.5
@@ -49,6 +50,10 @@ var _ads_was := false
 var _assist_t := 0.0
 var _assist_target := Vector2.ZERO
 var _semi_queued := false
+## The dropped weapon we're standing over (if it isn't one we carry).
+var near_pickup: WeaponPickup
+var use_hold := 0.0
+const USE_HOLD_TIME := 0.35
 
 
 func _ready() -> void:
@@ -309,6 +314,8 @@ func _try_mantle() -> bool:
 func _handle_weapons(delta: float, locked: bool) -> void:
 	var w := weapon()
 	_knife_cd = maxf(0.0, _knife_cd - delta)
+	if _update_pickups(delta, locked):
+		return
 
 	# Aim down sights.
 	var want_ads := not locked and Input.is_action_pressed("ads") and not sprinting and _swap_pending < 0 and _knife_hit_t < 0.0
@@ -390,7 +397,11 @@ func _handle_weapons(delta: float, locked: bool) -> void:
 		return
 
 	# Reloading.
-	if not locked and Input.is_action_just_pressed("reload") and w.can_reload():
+	var reload_pressed := Input.is_action_just_pressed("reload")
+	if near_pickup and Game.input_mode == Game.InputMode.GAMEPAD:
+		# Tap X reloads, hold X swaps: decide on release.
+		reload_pressed = Input.is_action_just_released("use") and use_hold < USE_HOLD_TIME
+	if not locked and reload_pressed and w.can_reload():
 		w.start_reload()
 		vm.start_reload(w.reload_total)
 		sprinting = false
@@ -423,6 +434,68 @@ func _handle_weapons(delta: float, locked: bool) -> void:
 		w.start_reload()
 		vm.start_reload(w.reload_total)
 		Sfx.play_3d("reload", global_position, -4.0)
+
+
+## Scavenge ammo from matching guns; hold Use to swap for a different one.
+## Returns true while a swap is in progress (blocks other weapon input).
+func _update_pickups(delta: float, locked: bool) -> bool:
+	near_pickup = null
+	var best_d := WeaponPickup.REACH
+	for n in get_tree().get_nodes_in_group("pickups"):
+		var pk: WeaponPickup = n
+		var d := Vector2(pk.global_position.x - global_position.x, pk.global_position.z - global_position.z).length()
+		if d > WeaponPickup.REACH or absf(pk.global_position.y - global_position.y) > 1.5:
+			continue
+		var carried := -1
+		for i in weapons.size():
+			if weapons[i].id == pk.weapon_id:
+				carried = i
+		if carried >= 0:
+			var cw := weapons[carried]
+			var cap := int(cw.data["reserve"])
+			if cw.reserve < cap and d < 1.3:
+				var take := mini(cap - cw.reserve, pk.mag + pk.reserve)
+				cw.reserve += take
+				pk.queue_free()
+				Sfx.play_ui("swap", -6.0)
+				ammo_scavenged.emit(take)
+			continue
+		if d < best_d:
+			best_d = d
+			near_pickup = pk
+	if near_pickup == null or locked:
+		use_hold = 0.0
+		return false
+	if Input.is_action_pressed("use"):
+		use_hold += delta
+		if use_hold >= USE_HOLD_TIME:
+			use_hold = 0.0
+			_swap_to_pickup(near_pickup)
+			return true
+	else:
+		use_hold = 0.0
+	return false
+
+
+func _swap_to_pickup(pk: WeaponPickup) -> void:
+	var old := weapon()
+	var drop := WeaponPickup.new()
+	get_parent().add_child(drop)
+	drop.setup(old.id, old.mag, old.reserve, global_position + (-global_transform.basis.z) * 0.6, team)
+	var nw := Weapon.new(pk.weapon_id)
+	nw.mag = pk.mag
+	nw.reserve = pk.reserve
+	weapons[current] = nw
+	pk.queue_free()
+	near_pickup = null
+	if model:
+		model.set_weapon(nw.id)
+	vm.cancel_reload()
+	vm.set_weapon(nw.id, team_color())
+	vm._swap = 1.0
+	vm.raise()
+	ads = 0.0
+	Sfx.play_ui("swap")
 
 
 func _fire_once(w: Weapon) -> void:

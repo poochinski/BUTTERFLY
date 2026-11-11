@@ -36,6 +36,7 @@ or the higher score after 10 minutes. You choose the bots' skill
 | Prone | Ctrl or Z | hold B |
 | Reload | R | X |
 | Switch weapon | 1 / 2 / mouse wheel | Y |
+| Pick up weapon (hold) | F | X (hold) |
 | Knife | V or E | R3 |
 | Frag grenade (hold to cook) | G | RB |
 | Killstreak (UAV) | 5 | D-pad up |
@@ -71,6 +72,35 @@ nearest enemy when you aim down sights.
   - The **terminal → jet bridge → walk-through airliner → rear stair truck**
     (middle).
   - The **open apron** with a business jet (south).
+
+## New in this update
+
+- **Weapon pickups:** fallen soldiers drop their gun. Walk over a gun you
+  already carry to scavenge its ammo, or hold **F** / **X** to swap the one
+  in your hands for it.
+- **Killstreak banners and medals:** a felt ribbon banner drops in at 3, 5,
+  7, 10, 15 and 20 kills. Medal splashes include First Blood, Headshot,
+  Double / Triple / Fury Kill, Payback, Longshot, Comeback, Paper Cut!
+  (knife) and Confetti Bomb (frag). The HUD tracks your streak toward the
+  UAV.
+- **Optics:**
+  - The M4A1 carries a tube red dot with a lit dot.
+  - The PDW-9 carries a holographic sight with a ring-and-dot reticle.
+  - The AK-47, shotgun and pistol use iron sights, and the Longbow keeps
+    its scope.
+- **Model-quality guns:** every gun is cut from real side-profile
+  silhouettes, like laminated cardboard, with rails, brass rivets, tape
+  wraps, foil barrels and curved mags. Gloved hands now have fingers.
+- **Level revamp:**
+  - window mullions, ceiling beams, column trims and parapets
+  - rooftop units and giant cardboard GATEWAY lettering
+  - gate seating, flight-info screens, queue ropes, vending machines,
+    potted trees, rugs and an awning
+  - stand markings and ground crew gear: power cart, belt loader, tug
+    and chocks
+  - floodlight masts and chain-link fencing
+  - extra airliner details, a background hangar, parked planes and
+    runway lights
 
 ## Art direction
 

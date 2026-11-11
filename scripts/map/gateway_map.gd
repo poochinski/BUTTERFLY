@@ -42,6 +42,7 @@ func build() -> void:
 	_bounds()
 	_backdrop()
 	_dressing()
+	_revamp()
 	_spawn_points()
 	_bake_navigation()
 
@@ -241,11 +242,14 @@ func _terminal() -> void:
 	b.column(Vector3(-37.5, 0, -2), 1.6, 1.1, Craft.mat(Craft.Kind.CARDBOARD, Craft.ORANGE, Craft.Pattern.BANDS, Craft.YELLOW, 4.0, 1.0, false))
 	_label(Vector3(-37.5, 2.6, -2), "INFO", 96, Craft.ORANGE, true)
 	# Seating.
+	var seat_cols := [Craft.TEAL, Craft.PINK, Craft.PURPLE, Craft.ORANGE, Craft.TEAL]
+	var si := 0
 	for x: float in [-52.0, -45.0, -38.0, -31.0, -24.0]:
-		Props.bench(b, Vector3(x, 0, 15.2), 0.0)
-		Props.bench(b, Vector3(x, 0, 16.6), PI)
+		Props.gate_seats(b, Vector3(x, 0, 15.1), 0.0, 6, seat_cols[si])
+		Props.gate_seats(b, Vector3(x, 0, 16.75), PI, 6, seat_cols[si])
+		si += 1
 	for z: float in [-14.0, -2.0]:
-		Props.bench(b, Vector3(-19.5, 0, z), PI * 0.5, 5)
+		Props.gate_seats(b, Vector3(-19.5, 0, z), PI * 0.5, 7, Craft.BLUE)
 	Props.planter(b, Vector3(-55.5, 0, -18), rng)
 	Props.planter(b, Vector3(-55.5, 0, 19.5), rng)
 	Props.planter(b, Vector3(-16.5, 0, 19.5), rng)
@@ -511,10 +515,8 @@ func _tarmac() -> void:
 	Props.crate(b, Vector3(-9, 0, -16), 1.2, -0.3, Craft.PINK)
 	for p in [Vector3(0, 0, -12), Vector3(1.5, 0, -12.5), Vector3(28, 0, -9), Vector3(38, 0, 4), Vector3(9, 0, 15), Vector3(50, 0, -2)]:
 		Props.cone(b, p)
-	var pole := Craft.mat(Craft.Kind.CARDBOARD, Color(0.55, 0.57, 0.62), 0, Color.WHITE, 1.0, 0.0, false)
-	for p in [Vector3(0, 0, -24), Vector3(56, 0, -34), Vector3(56, 0, 23), Vector3(14, 0, 23)]:
-		b.column(p, 0.2, 9.0, pole)
-		Craft.box(deco, p + Vector3(0, 9.1, 0), Vector3(1.6, 0.4, 0.8), Craft.mat(Craft.Kind.GLOW, Color(1.0, 0.95, 0.8)))
+	for p: Vector3 in [Vector3(0, 0, -24), Vector3(56, 0, -34), Vector3(56, 0, 23), Vector3(14, 0, 23)]:
+		Props.light_mast(b, p, 9.0, atan2(p.x - 20.0, p.z + 2.0))
 	var _unused := c1
 
 
@@ -568,9 +570,16 @@ func _bounds() -> void:
 		for i in n + 1:
 			var p := a.lerp(c, float(i) / n)
 			Craft.part(deco, Craft.cylinder(0.08, 0.08, 2.6, 8), post_m, p + Vector3(0, 1.3, 0))
-		for h: float in [0.6, 1.4, 2.2]:
-			var s := Craft.box(deco, mid + Vector3(0, h, 0), Vector3(len, 0.05, 0.05) if along_x else Vector3(0.05, 0.05, len), yarn)
-			s.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		var fence := MeshInstance3D.new()
+		var qm := QuadMesh.new()
+		qm.size = Vector2(len, 2.4)
+		fence.mesh = qm
+		fence.material_override = Architecture.chain_link()
+		fence.position = mid + Vector3(0, 1.25, 0)
+		fence.rotation.y = 0.0 if along_x else PI * 0.5
+		deco.add_child(fence)
+		var top_rail := Craft.box(deco, mid + Vector3(0, 2.5, 0), Vector3(len, 0.06, 0.06) if along_x else Vector3(0.06, 0.06, len), yarn)
+		top_rail.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 
 
 func _backdrop() -> void:
@@ -688,6 +697,114 @@ func _dressing() -> void:
 			Dressing.grass(d, c + Vector3(cos(a2), 0, sin(a2)) * 0.9, 0.6, rng)
 
 
+# ----------------------------------------------------------------- revamp
+
+func _revamp() -> void:
+	var r := Node3D.new()
+	r.name = "Revamp"
+	deco.add_child(r)
+	var frame_c := Color(0.95, 0.95, 0.92)
+	# Window mullions everywhere there's glass.
+	for w in [[Vector3(-14, 1, -24), Vector3(-14, 2.6, -12)], [Vector3(-14, 1, -1), Vector3(-14, 2.6, 9)], [Vector3(-14, 1, 15), Vector3(-14, 2.6, 21)],
+			[Vector3(-14, 4.5, -1), Vector3(-14, 7.2, 20)], [Vector3(-55, 1, 22), Vector3(-44, 2.6, 22)], [Vector3(-32, 1, 22), Vector3(-18, 2.6, 22)],
+			[Vector3(-54, 4.5, 22), Vector3(-18, 7.0, 22)]]:
+		Architecture.window_frame(r, w[0], w[1], 1.6, frame_c)
+	for w in [[Vector3(1, 1.2, -26), Vector3(6, 2.6, -26)], [Vector3(15, 1.2, -26), Vector3(20, 2.6, -26)]]:
+		Architecture.window_frame(r, w[0], w[1], 1.25, Craft.YELLOW, false)
+	for w in [[Vector3(-12, 3.9, -10.5), Vector3(-3, 5.1, -10.5)], [Vector3(-12, 3.9, -7.5), Vector3(-4, 5.1, -7.5)]]:
+		Architecture.window_frame(r, w[0], w[1], 1.0, Color(0.7, 0.72, 0.78), false)
+	# Ceiling structure: long beams and cross beams under the roof.
+	for x: float in [-54.0, -42.0, -30.0, -18.0]:
+		Architecture.beam(r, Vector3(x, 7.7, -29.7), Vector3(x, 7.7, 21.7), 0.42, 0.55, Craft.KRAFT_DARK)
+	for z: float in [-18.0, -4.0, 10.0]:
+		Architecture.beam(r, Vector3(-57.7, 7.35, z), Vector3(-14.3, 7.35, z), 0.3, 0.4, Craft.KRAFT)
+	for p: Vector3 in [Vector3(-44, 0, -8), Vector3(-32, 0, -8), Vector3(-44, 0, 12), Vector3(-32, 0, 12)]:
+		Architecture.column_trim(r, p, 8.0, 0.9, Craft.CREAM)
+	# Gate furniture, screens, queue ropes, vending, bins, trees, rugs.
+	Props.info_screen(r, Vector3(-40, 0, -14), 0.0, ["DEPARTURES", "PC 101  ORIGAMI CITY", "PC 207  FELT FALLS", "PC 330  YARN HARBOR"])
+	Props.info_screen(r, Vector3(-27, 0, 11.5), PI, ["GATE 7", "BOARDING", "PC 101 ORIGAMI CITY"])
+	Props.info_screen(r, Vector3(-47.5, 0, 9.5), PI * 0.5, ["ARRIVALS", "PC 118  CRAYON COVE", "PC 220  GLUE GULCH"])
+	var q1 := []
+	var q2 := []
+	var x := -53.0
+	while x < -18.5:
+		q1.append(Vector3(x, 0, 1.2))
+		q2.append(Vector3(x, 0, -0.6))
+		x += 2.6
+	Props.stanchions(r, q1)
+	Props.stanchions(r, q2)
+	for z: float in [-10.5, -9.3, 13.6]:
+		Props.vending(b, Vector3(-57.1, 0, z), -PI * 0.5, [Craft.RED, Craft.BLUE, Craft.PURPLE][int(absf(z)) % 3], rng)
+	for p: Vector3 in [Vector3(-43, 0, -9.2), Vector3(-31, 0, 13.2), Vector3(-20.6, 0, -6.5), Vector3(-55, 0, 1.0), Vector3(-17, 0, 6.5)]:
+		Props.trash_bin(b, p, Craft.GRASS)
+	for p: Vector3 in [Vector3(-38, 0, 8.5), Vector3(-26, 0, -8.5), Vector3(-49.5, 0, -7.5)]:
+		Props.potted_tree(b, p, rng)
+	Props.rug(r, Vector3(-36, 0, -6.5), Vector2(40, 2.6), Craft.PURPLE)
+	Props.rug(r, Vector3(-38, 0, 15.9), Vector2(33, 5.6), Craft.TEAL)
+	Props.rug(r, Vector3(-36, 0, 1.0 - 0.3), Vector2(36, 2.6), Craft.RED)
+	# Terminal exterior: parapet, rooftop plant, big cardboard lettering.
+	Architecture.parapet(r, Vector3(-58.2, 8.4, -30.2), Vector3(-13.8, 8.4, 22.2), 0.7, Craft.CREAM, Craft.TEAL)
+	Architecture.rooftop(r, Vector3(-36, 8.4, -4), rng, 6, Vector2(16, 18))
+	Architecture.letters(r, "GATEWAY", Vector3(-13.6, 9.3, -4.0), PI * 0.5, 3.4, Craft.YELLOW)
+	Architecture.letters(r, "TERMINAL 1", Vector3(-38, 3.55, 22.35), 0.0, 0.85, Craft.CREAM, 0.12)
+	Props.awning(r, Vector3(-38, 3.3, 22.3), 0.0, 6.0, Craft.ORANGE)
+	# Baggage hall roof.
+	Architecture.parapet(r, Vector3(-14.2, 5.3, -38.2), Vector3(32.2, 5.3, -25.8), 0.5, Craft.PURPLE, Craft.YELLOW)
+	Architecture.rooftop(r, Vector3(9, 5.3, -32), rng, 4, Vector2(18, 3))
+	# Tarmac: stand markings and ground support equipment.
+	var stand := Architecture.letters(r, "07", Vector3(-8.5, 0.03, 6.0), 0.0, 2.6, Craft.WHITE, 0.02)
+	stand.rotation = Vector3(-PI * 0.5, PI * 0.5, 0)
+	Craft.box(r, Vector3(-10.2, 0.02, -2), Vector3(0.5, 0.03, 6.0), Craft.mat(Craft.Kind.PAPER, Craft.RED, Craft.Pattern.HAZARD, Craft.WHITE, 1.5), Vector3.ZERO, false)
+	Craft.box(r, Vector3(-7, 0.02, -9.0), Vector3(10.0, 0.03, 2.8), Craft.mat(Craft.Kind.PAPER, Craft.YELLOW, Craft.Pattern.HAZARD, Color(0.3, 0.32, 0.36), 0.6), Vector3.ZERO, false)
+	for i in 6:
+		var arrow := Craft.cutout(PackedVector2Array([Vector2(-0.3, -0.8), Vector2(0.3, -0.8), Vector2(0.3, 0.2), Vector2(0.7, 0.2), Vector2(0, 1.0), Vector2(-0.7, 0.2), Vector2(-0.3, 0.2)]), 0.02)
+		Craft.part(r, arrow, Craft.mat(Craft.Kind.PAPER, Craft.YELLOW, 0, Color.WHITE, 1.0, 0.0, false), Vector3(-2 + i * 9.0, 0.03, 20.0), Vector3(-PI * 0.5, -PI * 0.5, 0))
+	Props.gpu_cart(b, Vector3(-6.8, 0, 1.8), 0.25)
+	Props.belt_loader(b, Vector3(3.2, 0, 4.6), PI, 2.0)
+	Props.tug(b, Vector3(9, 0, 7.5), 0.5)
+	Props.chocks(r, Vector3(-3, 0, -2))
+	Props.chocks(r, Vector3(17, 0, -4.2))
+	Props.chocks(r, Vector3(17, 0, 0.2))
+	# Airliner details: engine fans, wingtip lights, door frames.
+	var zc := -2.0
+	for side: float in [-1.0, 1.0]:
+		var ez := zc + side * 8.5
+		Craft.part(r, Craft.cutout(Craft.star_points(0.72, 0.25, 9), 0.03), Craft.mat(Craft.Kind.FOIL, Color(0.75, 0.76, 0.8), 0, Color.WHITE, 1.0, 0.0, false), Vector3(13.95, 1.7, ez), Vector3(0, PI * 0.5, 0.2))
+		var tip := zc + side * 19.2
+		Craft.part(r, Craft.sphere(0.25, 10), Craft.mat(Craft.Kind.GLOW, Color(0.2, 1.0, 0.3) if side > 0.0 else Color(1.0, 0.15, 0.1), 0, Color.WHITE, 1.0, 0.0, false), Vector3(24.3, 2.85, tip))
+	var door_m := Craft.mat(Craft.Kind.PAPER, Color(0.55, 0.6, 0.7), 0, Color.WHITE, 1.0, 0.0, false)
+	for d in [[-2.4, 0.4, zc - 3.22], [31.5, 33.5, zc + 3.22]]:
+		var x0: float = d[0]
+		var x1: float = d[1]
+		var dz: float = d[2]
+		Craft.box(r, Vector3(x0 - 0.06, 4.2, dz), Vector3(0.1, 2.5, 0.04), door_m)
+		Craft.box(r, Vector3(x1 + 0.06, 4.2, dz), Vector3(0.1, 2.5, 0.04), door_m)
+	# Background: a big corrugated hangar and planes parked on remote stands.
+	var hangar := Craft.pivot(r, Vector3(110, 0, -8))
+	Craft.part(hangar, Craft.tube(20.0, 46.0, 36, false, PI), Craft.mat(Craft.Kind.CARDBOARD, Color(0.62, 0.66, 0.72), Craft.Pattern.BANDS, Color(0.55, 0.58, 0.64), 0.8, 1.0, false), Vector3.ZERO, Vector3(PI * 0.5, 0, 0))
+	Craft.part(hangar, Craft.tube(19.6, 46.0, 36, true, PI), Craft.mat(Craft.Kind.CARDBOARD, Color(0.35, 0.38, 0.42), 0, Color.WHITE, 1.0, 0.0, false), Vector3.ZERO, Vector3(PI * 0.5, 0, 0))
+	Craft.box(hangar, Vector3(23, 10, 0), Vector3(0.5, 20, 40), Craft.mat(Craft.Kind.CARDBOARD, Color(0.35, 0.38, 0.42)))
+	Architecture.letters(hangar, "HANGAR 3", Vector3(-23.2, 16.5, 0), -PI * 0.5, 3.0, Craft.CREAM, 0.3)
+	_simple_plane(hangar, Vector3(0, 0, 0), 0.0, Craft.PINK)
+	_simple_plane(r, Vector3(95, 0, -70), 0.7, Craft.PURPLE)
+	_simple_plane(r, Vector3(-30, 0, -78), -0.4, Craft.ORANGE)
+	for i in 30:
+		for side: float in [39.0, 61.0]:
+			Craft.part(r, Craft.sphere(0.25, 6), Craft.mat(Craft.Kind.GLOW, Color(1.0, 0.9, 0.55), 0, Color.WHITE, 1.0, 0.0, false), Vector3(-130 + i * 9.0, 0.25, side), Vector3.ZERO, Vector3.ONE, false)
+
+
+func _simple_plane(parent: Node3D, pos: Vector3, yaw: float, livery: Color) -> void:
+	var root := Craft.pivot(parent, pos, Vector3(0, yaw, 0))
+	var skin := Craft.mat(Craft.Kind.PAPER, Color(0.96, 0.95, 0.9), 0, Color.WHITE, 1.0, 0.0, false)
+	Craft.part(root, Craft.tube(2.6, 30.0, 24), skin, Vector3(0, 3.6, 0))
+	Craft.part(root, Craft.sphere(2.6, 20), skin, Vector3(-15, 3.6, 0), Vector3.ZERO, Vector3(1.5, 1, 1))
+	Craft.part(root, Craft.cylinder(2.6, 0.5, 6.0, 20), skin, Vector3(18, 4.1, 0), Vector3(0, 0, -PI * 0.5 + 0.1))
+	Craft.box(root, Vector3(-1, 3.0, 0), Vector3(6.0, 0.3, 30.0), Craft.mat(Craft.Kind.CARDBOARD, Color(0.9, 0.9, 0.92)))
+	Craft.part(root, Craft.cutout(PackedVector2Array([Vector2(0, 0), Vector2(5, 0), Vector2(6.5, 6), Vector2(4.5, 6.2)]), 0.3), Craft.mat(Craft.Kind.CARDBOARD, livery, 0, Color.WHITE, 1.0, 0.0, false), Vector3(16, 5.6, 0))
+	Craft.box(root, Vector3(0, 3.2, 2.62), Vector3(28, 0.4, 0.04), Craft.mat(Craft.Kind.PAPER, livery))
+	Craft.box(root, Vector3(0, 3.2, -2.62), Vector3(28, 0.4, 0.04), Craft.mat(Craft.Kind.PAPER, livery))
+
+
 # ----------------------------------------------------------------- spawns
 
 func _spawn_points() -> void:
@@ -707,9 +824,9 @@ func _bake_navigation() -> void:
 	var nm := NavigationMesh.new()
 	nm.geometry_parsed_geometry_type = NavigationMesh.PARSED_GEOMETRY_STATIC_COLLIDERS
 	nm.geometry_collision_mask = MapBuilder.WORLD_LAYER
-	nm.agent_radius = 0.45
+	nm.agent_radius = 0.5
 	nm.agent_height = 1.75
-	nm.agent_max_climb = 0.35
+	nm.agent_max_climb = 0.25
 	nm.agent_max_slope = 40.0
 	nm.cell_size = 0.25
 	nm.cell_height = 0.25

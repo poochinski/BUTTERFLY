@@ -156,46 +156,61 @@ static func tube(radius: float, length: float, segs := 28, inward := false, arc 
 ## A flat paper cut-out extruded to `depth` (stars, clouds, signs, fins...).
 ## The polygon is in the XY plane; the shape faces +Z.
 static func cutout(points: PackedVector2Array, depth := 0.02) -> ArrayMesh:
-	var key := "cut|%d|%.3f|%s" % [points.size(), depth, str(points).md5_text()]
+	var key := "cut|%d|%.4f|%s" % [points.size(), depth, str(points).md5_text()]
 	if _meshes.has(key):
 		return _meshes[key]
+	var pts := points.duplicate()
+	if Geometry2D.is_polygon_clockwise(pts):
+		pts.reverse()
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	var tris := Geometry2D.triangulate_polygon(points)
+	var tris := Geometry2D.triangulate_polygon(pts)
 	var hz := depth * 0.5
 	var bmin := Vector2(INF, INF)
 	var bmax := Vector2(-INF, -INF)
-	for p in points:
+	for p in pts:
 		bmin = bmin.min(p)
 		bmax = bmax.max(p)
 	var ext := (bmax - bmin).max(Vector2(0.001, 0.001))
 	for side: float in [1.0, -1.0]:
-		var order := [0, 1, 2] if side > 0.0 else [0, 2, 1]
+		var n := Vector3(0, 0, side)
 		for t in range(0, tris.size(), 3):
-			for o in order:
-				var p: Vector2 = points[tris[t + o]]
-				st.set_normal(Vector3(0, 0, side))
-				st.set_uv((p - bmin) / ext)
-				st.add_vertex(Vector3(p.x, p.y, hz * side))
-	var n := points.size()
-	for i in n:
-		var a: Vector2 = points[i]
-		var b: Vector2 = points[(i + 1) % n]
+			var a: Vector2 = pts[tris[t]]
+			var b: Vector2 = pts[tris[t + 1]]
+			var c: Vector2 = pts[tris[t + 2]]
+			_tri(st, Vector3(a.x, a.y, hz * side), Vector3(b.x, b.y, hz * side), Vector3(c.x, c.y, hz * side), n,
+				(a - bmin) / ext, (b - bmin) / ext, (c - bmin) / ext)
+	var count := pts.size()
+	for i in count:
+		var a: Vector2 = pts[i]
+		var b: Vector2 = pts[(i + 1) % count]
 		var e := (b - a).normalized()
 		var nrm := Vector3(e.y, -e.x, 0)
-		if Geometry2D.is_polygon_clockwise(points):
-			nrm = -nrm
 		var va := Vector3(a.x, a.y, hz)
 		var vb := Vector3(b.x, b.y, hz)
 		var va2 := Vector3(a.x, a.y, -hz)
 		var vb2 := Vector3(b.x, b.y, -hz)
-		for v in [va, va2, vb2, va, vb2, vb]:
-			st.set_normal(nrm)
-			st.set_uv(Vector2(0, 0))
-			st.add_vertex(v)
+		_tri(st, va, va2, vb2, nrm, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
+		_tri(st, va, vb2, vb, nrm, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
 	var m := st.commit()
 	_meshes[key] = m
 	return m
+
+
+## Emits a triangle wound so that its front face (clockwise in Godot) faces
+## along the normal, whatever order the corners arrive in.
+static func _tri(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, n: Vector3, ua: Vector2, ub: Vector2, uc: Vector2) -> void:
+	if (b - a).cross(c - a).dot(n) > 0.0:
+		var t := b
+		b = c
+		c = t
+		var tu := ub
+		ub = uc
+		uc = tu
+	for v in [[a, ua], [b, ub], [c, uc]]:
+		st.set_normal(n)
+		st.set_uv(v[1])
+		st.add_vertex(v[0])
 
 
 # ------------------------------------------------------------ shape lists

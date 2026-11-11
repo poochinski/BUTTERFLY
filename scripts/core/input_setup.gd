@@ -19,6 +19,7 @@ static func register() -> void:
 	_add("crouch", [_key(KEY_C), _joy(JOY_BUTTON_B)])
 	_add("prone", [_key(KEY_CTRL), _key(KEY_Z)])
 	_add("sprint", [_key(KEY_SHIFT), _joy(JOY_BUTTON_LEFT_STICK)])
+	_add("use", [_key(KEY_F), _joy(JOY_BUTTON_X)])
 	_add("melee", [_key(KEY_V), _key(KEY_E), _joy(JOY_BUTTON_RIGHT_STICK)])
 	_add("frag", [_key(KEY_G), _joy(JOY_BUTTON_RIGHT_SHOULDER)])
 	_add("switch_weapon", [_mouse(MOUSE_BUTTON_WHEEL_UP), _mouse(MOUSE_BUTTON_WHEEL_DOWN), _joy(JOY_BUTTON_Y)])

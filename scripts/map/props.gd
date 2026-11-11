@@ -153,3 +153,166 @@ static func paper_tree(parent: Node3D, pos: Vector3, scale: float, rng: RandomNu
 		var y := (3.2 + i * 0.7) * scale
 		for k in 2:
 			Craft.part(parent, Craft.cutout(pts, 0.04), m, pos + Vector3(0, y, 0), Vector3(0, k * PI * 0.5 + i * 0.4, 0))
+
+
+# ------------------------------------------------------------ revamp props
+
+## Airport gate seating: a row of linked seats with armrests on a beam.
+static func gate_seats(b: MapBuilder, pos: Vector3, yaw: float, seats: int, col: Color) -> void:
+	var w := seats * 0.62
+	var frame := Craft.mat(Craft.Kind.FOIL, Color(0.72, 0.74, 0.78), 0, Color.WHITE, 1.0, 0.0, true)
+	var cushion := Craft.mat(Craft.Kind.FELT, col, Craft.Pattern.STITCH, Craft.CREAM)
+	var body := b.solid(pos + Vector3(0, 0.25, 0), Vector3(w, 0.5, 0.62), null, yaw)
+	Craft.box(body, Vector3(0, -0.02, 0), Vector3(w + 0.1, 0.06, 0.12), frame)
+	for leg: float in [-w * 0.4, w * 0.4]:
+		Craft.box(body, Vector3(leg, -0.15, 0), Vector3(0.08, 0.2, 0.5), frame)
+	for i in seats:
+		var x := -w * 0.5 + 0.31 + i * 0.62
+		Craft.box(body, Vector3(x, 0.08, 0.0), Vector3(0.52, 0.12, 0.5), cushion)
+		Craft.box(body, Vector3(x, 0.42, 0.24), Vector3(0.52, 0.56, 0.1), cushion, Vector3(-0.12, 0, 0))
+		Craft.box(body, Vector3(x - 0.31, 0.22, 0.02), Vector3(0.05, 0.05, 0.44), frame)
+		Craft.box(body, Vector3(x - 0.31, 0.11, 0.18), Vector3(0.05, 0.22, 0.05), frame)
+	Craft.box(body, Vector3(w * 0.5, 0.22, 0.02), Vector3(0.05, 0.05, 0.44), frame)
+
+
+static func vending(b: MapBuilder, pos: Vector3, yaw: float, col: Color, rng: RandomNumberGenerator) -> void:
+	var body := b.solid(pos + Vector3(0, 1.0, 0), Vector3(1.1, 2.0, 0.8), Craft.mat(Craft.Kind.CARDBOARD, col), yaw)
+	Craft.box(body, Vector3(-0.12, 0.15, -0.41), Vector3(0.72, 1.4, 0.02), Craft.mat(Craft.Kind.GLOW, Color(0.75, 0.92, 1.0), 0, Color.WHITE, 1.0, 0.0, true))
+	var caps := [Craft.RED, Craft.YELLOW, Craft.GRASS, Craft.ORANGE, Craft.PINK, Craft.BLUE]
+	for row in 4:
+		for colm in 4:
+			Craft.part(body, Craft.cylinder(0.05, 0.05, 0.16, 8), Craft.mat(Craft.Kind.PLASTIC, caps[(row * 4 + colm + rng.randi()) % caps.size()], 0, Color.WHITE, 1.0, 0.0, false), Vector3(-0.4 + colm * 0.18, 0.65 - row * 0.32, -0.43))
+	Craft.box(body, Vector3(0.38, 0.3, -0.41), Vector3(0.22, 0.5, 0.03), Craft.mat(Craft.Kind.PAPER, Color(0.25, 0.25, 0.28)))
+	Craft.box(body, Vector3(0, -0.75, -0.41), Vector3(0.8, 0.22, 0.03), Craft.mat(Craft.Kind.PAPER, Color(0.15, 0.15, 0.17)))
+	Craft.box(body, Vector3(0, 0.95, -0.41), Vector3(1.0, 0.2, 0.03), Craft.mat(Craft.Kind.PAPER, Craft.CREAM, Craft.Pattern.DOTS, col, 2.0))
+
+
+static func trash_bin(b: MapBuilder, pos: Vector3, col: Color) -> void:
+	var body := b.column(pos, 0.32, 0.95, Craft.mat(Craft.Kind.CARDBOARD, col, Craft.Pattern.BANDS, col.darkened(0.2), 6.0, 1.0, false))
+	Craft.part(body, Craft.cylinder(0.36, 0.36, 0.08, 18), Craft.mat(Craft.Kind.PLASTIC, Color(0.25, 0.25, 0.28), 0, Color.WHITE, 1.0, 0.0, false), Vector3(0, 0.5, 0))
+
+
+## Queue stanchions joined by felt ropes.
+static func stanchions(parent: Node3D, pts: Array) -> void:
+	var post := Craft.mat(Craft.Kind.FOIL, Color(0.85, 0.75, 0.45), 0, Color.WHITE, 1.0, 0.0, false)
+	var rope := Craft.mat(Craft.Kind.FELT, Craft.RED, 0, Color.WHITE, 1.0, 0.0, false)
+	for i in pts.size():
+		var p: Vector3 = pts[i]
+		Craft.part(parent, Craft.cylinder(0.03, 0.03, 0.95, 8), post, p + Vector3(0, 0.48, 0))
+		Craft.part(parent, Craft.cylinder(0.16, 0.18, 0.04, 14), post, p + Vector3(0, 0.02, 0))
+		Craft.part(parent, Craft.sphere(0.05, 8), post, p + Vector3(0, 0.97, 0))
+		if i > 0:
+			var q: Vector3 = pts[i - 1]
+			for k in 6:
+				var t0 := float(k) / 6.0
+				var t1 := float(k + 1) / 6.0
+				var sag := func(t: float) -> Vector3: return q.lerp(p, t) + Vector3(0, 0.9 - 0.18 * 4.0 * t * (1.0 - t), 0)
+				var a: Vector3 = sag.call(t0)
+				var c: Vector3 = sag.call(t1)
+				var seg := Craft.box(parent, (a + c) * 0.5, Vector3.ONE, rope, Vector3.ZERO, false)
+				seg.look_at_from_position((a + c) * 0.5, c, Vector3.UP)
+				seg.scale = Vector3(0.04, 0.04, a.distance_to(c) + 0.01)
+
+
+static func potted_tree(b: MapBuilder, pos: Vector3, rng: RandomNumberGenerator) -> void:
+	var pot := b.column(pos, 0.6, 0.9, Craft.mat(Craft.Kind.KNIT, Craft.ORANGE, 0, Color.WHITE, 1.0, 0.0, false))
+	Craft.part(pot, Craft.cylinder(0.56, 0.56, 0.06, 18), Craft.mat(Craft.Kind.FELT, Color(0.35, 0.25, 0.18), 0, Color.WHITE, 1.0, 0.0, false), Vector3(0, 0.43, 0))
+	Props.paper_tree(b.deco_root, pos + Vector3(0, 0.45, 0), 0.75, rng)
+
+
+static func info_screen(parent: Node3D, pos: Vector3, yaw: float, lines: Array) -> void:
+	var root := Craft.pivot(parent, pos, Vector3(0, yaw, 0))
+	var frame := Craft.mat(Craft.Kind.CARDBOARD, Color(0.25, 0.26, 0.3))
+	Craft.box(root, Vector3(0, 0.9, 0), Vector3(0.12, 1.8, 0.12), frame)
+	Craft.box(root, Vector3(0, 0.03, 0), Vector3(0.7, 0.06, 0.5), frame)
+	Craft.box(root, Vector3(0, 2.1, 0), Vector3(1.5, 0.95, 0.12), frame)
+	Craft.box(root, Vector3(0, 2.1, 0.065), Vector3(1.38, 0.83, 0.01), Craft.mat(Craft.Kind.GLOW, Color(0.12, 0.2, 0.42), 0, Color.WHITE, 1.0, 0.0, true))
+	for i in lines.size():
+		var l := Label3D.new()
+		l.text = lines[i]
+		l.font = preload("res://assets/fonts/Fredoka.ttf")
+		l.font_size = 40
+		l.pixel_size = 0.0045
+		l.modulate = Color(1.0, 0.85, 0.35) if i == 0 else Color(0.9, 0.95, 1.0)
+		l.outline_size = 0
+		l.position = Vector3(0, 2.4 - i * 0.2, 0.075)
+		root.add_child(l)
+
+
+## A striped felt awning over a shop front, facing +Z after yaw.
+static func awning(parent: Node3D, pos: Vector3, yaw: float, width: float, col: Color) -> void:
+	var root := Craft.pivot(parent, pos, Vector3(0, yaw, 0))
+	var m := Craft.mat(Craft.Kind.FELT, col, Craft.Pattern.BANDS, Craft.CREAM, 3.0)
+	var sheet := Craft.box(root, Vector3(0, 0, 0.45), Vector3(width, 0.04, 1.0), Craft.mat(Craft.Kind.FELT, col, 0, Color.WHITE, 1.0, 0.0), Vector3(0.45, 0, 0))
+	sheet.scale = Vector3(width, 0.04, 1.0)
+	var n := int(width / 0.5)
+	for i in n:
+		if i % 2 == 0:
+			Craft.box(root, Vector3(-width * 0.5 + (i + 0.5) * width / n, 0.005, 0.45), Vector3(width / n, 0.045, 1.0), Craft.mat(Craft.Kind.FELT, Craft.CREAM, 0, Color.WHITE, 1.0, 0.0), Vector3(0.45, 0, 0))
+	for i in n:
+		var x := -width * 0.5 + (i + 0.5) * width / n
+		var pts := PackedVector2Array([Vector2(-width / n * 0.5, 0), Vector2(width / n * 0.5, 0), Vector2(0, -0.16)])
+		Craft.part(root, Craft.cutout(pts, 0.01), Craft.mat(Craft.Kind.FELT, col if i % 2 == 0 else Craft.CREAM, 0, Color.WHITE, 1.0, 0.0, false), Vector3(x, -0.4, 0.88))
+	var _u := m
+
+
+static func rug(parent: Node3D, center: Vector3, size: Vector2, col: Color, yaw := 0.0) -> void:
+	Craft.box(parent, center + Vector3(0, 0.025, 0), Vector3(size.x, 0.02, size.y), Craft.mat(Craft.Kind.FELT, col, Craft.Pattern.STITCH, Craft.CREAM, 2.0), Vector3(0, yaw, 0), false)
+
+
+## Ground power unit on wheels.
+static func gpu_cart(b: MapBuilder, pos: Vector3, yaw: float) -> void:
+	var body := b.solid(pos + Vector3(0, 0.75, 0), Vector3(1.4, 1.1, 2.2), Craft.mat(Craft.Kind.CARDBOARD, Craft.YELLOW), yaw)
+	Craft.box(body, Vector3(0, 0.0, -1.11), Vector3(1.1, 0.7, 0.02), Craft.mat(Craft.Kind.PAPER, Color(0.25, 0.26, 0.3)))
+	Craft.box(body, Vector3(0, 0.56, 0), Vector3(1.5, 0.06, 2.3), Craft.mat(Craft.Kind.CARDBOARD, Craft.INK, Craft.Pattern.HAZARD, Craft.YELLOW, 2.0))
+	var wheel := Craft.mat(Craft.Kind.PLASTIC, Color(0.12, 0.12, 0.13), 0, Color.WHITE, 1.0, 0.0, false)
+	for sx: float in [-1.0, 1.0]:
+		for z: float in [-0.7, 0.7]:
+			Craft.part(body, Craft.cylinder(0.24, 0.24, 0.16, 14), wheel, Vector3(sx * 0.72, -0.52, z), Vector3(0, 0, PI * 0.5))
+	var cable := Craft.mat(Craft.Kind.KNIT, Color(0.15, 0.15, 0.17), 0, Color.WHITE, 3.0, 0.0, false)
+	Craft.part(body, Craft.capsule(0.05, 1.6), cable, Vector3(0.5, 0.4, -1.6), Vector3(1.1, 0, 0.3))
+
+
+## Belt loader: an inclined conveyor on a little truck.
+static func belt_loader(b: MapBuilder, pos: Vector3, yaw: float, rise: float) -> void:
+	var truck := b.solid(pos + Vector3(0, 0.55, 0), Vector3(1.6, 0.7, 4.0), Craft.mat(Craft.Kind.CARDBOARD, Craft.ORANGE), yaw)
+	var belt := Craft.mat(Craft.Kind.CARDBOARD, Color(0.22, 0.23, 0.26), Craft.Pattern.BANDS, Color(0.32, 0.33, 0.36), 8.0)
+	var length := 5.5
+	var pitch := asin(clampf(rise / length, 0.0, 0.9))
+	var beltn := Craft.box(truck, Vector3(0, 0.5 + rise * 0.5, -0.4), Vector3(0.9, 0.12, length), belt, Vector3(pitch, 0, 0))
+	beltn.rotation.x = pitch
+	for side: float in [-1.0, 1.0]:
+		Craft.box(truck, Vector3(side * 0.5, 0.62 + rise * 0.5, -0.4), Vector3(0.06, 0.18, length), Craft.mat(Craft.Kind.FOIL, Color(0.8, 0.8, 0.82)), Vector3(pitch, 0, 0))
+	var wheel := Craft.mat(Craft.Kind.PLASTIC, Color(0.12, 0.12, 0.13), 0, Color.WHITE, 1.0, 0.0, false)
+	for sx: float in [-1.0, 1.0]:
+		for z: float in [-1.4, 1.4]:
+			Craft.part(truck, Craft.cylinder(0.3, 0.3, 0.2, 14), wheel, Vector3(sx * 0.82, -0.25, z), Vector3(0, 0, PI * 0.5))
+
+
+static func chocks(parent: Node3D, pos: Vector3) -> void:
+	var m := Craft.mat(Craft.Kind.CARDBOARD, Craft.YELLOW, Craft.Pattern.HAZARD, Craft.INK, 3.0)
+	for z: float in [-0.75, 0.75]:
+		Craft.box(parent, pos + Vector3(0, 0.12, z), Vector3(0.5, 0.24, 0.22), m)
+
+
+## Floodlight mast with a crossbar of lamp heads.
+static func light_mast(b: MapBuilder, pos: Vector3, height: float, yaw := 0.0) -> void:
+	var pole := Craft.mat(Craft.Kind.CARDBOARD, Color(0.6, 0.62, 0.68), Craft.Pattern.BANDS, Color(0.5, 0.52, 0.58), 2.0, 1.0, false)
+	b.column(pos, 0.22, height, pole)
+	var head := Craft.pivot(b.deco_root, pos + Vector3(0, height, 0), Vector3(0, yaw, 0))
+	Craft.box(head, Vector3.ZERO, Vector3(2.4, 0.16, 0.16), Craft.mat(Craft.Kind.CARDBOARD, Color(0.45, 0.47, 0.52)))
+	for x: float in [-0.9, -0.3, 0.3, 0.9]:
+		Craft.box(head, Vector3(x, 0.32, 0), Vector3(0.5, 0.42, 0.22), Craft.mat(Craft.Kind.CARDBOARD, Color(0.45, 0.47, 0.52)))
+		Craft.box(head, Vector3(x, 0.32, -0.115), Vector3(0.42, 0.34, 0.01), Craft.mat(Craft.Kind.GLOW, Color(1.0, 0.95, 0.82), 0, Color.WHITE, 1.0, 0.0, true))
+	Craft.box(b.deco_root, pos + Vector3(0, 1.0, 0.25), Vector3(0.4, 0.6, 0.12), Craft.mat(Craft.Kind.CARDBOARD, Craft.YELLOW, Craft.Pattern.HAZARD, Craft.INK, 3.0))
+
+
+static func tug(b: MapBuilder, pos: Vector3, yaw: float) -> void:
+	var body := b.solid(pos + Vector3(0, 0.6, 0), Vector3(1.6, 0.8, 2.6), Craft.mat(Craft.Kind.CARDBOARD, Craft.TEAL), yaw)
+	Craft.box(body, Vector3(0, 0.7, 0.4), Vector3(1.3, 0.7, 1.1), Craft.mat(Craft.Kind.CARDBOARD, Craft.TEAL.lightened(0.15)))
+	Craft.box(body, Vector3(0, 0.75, -0.16), Vector3(1.2, 0.5, 0.02), Craft.mat(Craft.Kind.PAPER, Color(0.55, 0.8, 0.92)))
+	var wheel := Craft.mat(Craft.Kind.PLASTIC, Color(0.12, 0.12, 0.13), 0, Color.WHITE, 1.0, 0.0, false)
+	for sx: float in [-1.0, 1.0]:
+		for z: float in [-0.85, 0.85]:
+			Craft.part(body, Craft.cylinder(0.32, 0.32, 0.26, 14), wheel, Vector3(sx * 0.8, -0.3, z), Vector3(0, 0, PI * 0.5))
+	Craft.part(body, Craft.sphere(0.1, 8), Craft.mat(Craft.Kind.GLOW, Craft.ORANGE, 0, Color.WHITE, 1.0, 0.0, false), Vector3(0, 1.12, 0.4))
