@@ -198,6 +198,7 @@ func _build() -> void:
 		GunBuilder._bake(hp, true)
 		GunBuilder._bake(kn, true)
 	gun_mount = Craft.pivot(torso, Vector3(0.12, 0.33, -0.25))
+	Craft.make_moving(self)
 	# Merge each body part's pieces so a squad of dolls stays cheap to draw.
 	for n: Node3D in [hips, torso, vest_root, head]:
 		GunBuilder._bake(n, true)

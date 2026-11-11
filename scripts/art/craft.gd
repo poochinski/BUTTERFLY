@@ -94,6 +94,37 @@ static func outlined(base: ShaderMaterial, width := 0.012, viewmodel := false) -
 	return m
 
 
+## A copy of a craft material for something that moves: its seed is fixed,
+## so its fibres, tint and camo stay put instead of re-rolling every frame.
+static func moving(m: Material) -> Material:
+	if not m is ShaderMaterial or m.has_meta("moving"):
+		return m
+	var sm := m as ShaderMaterial
+	if sm.shader != CRAFT_SHADER:
+		return m
+	var key := "moving|%d" % sm.get_instance_id()
+	if _mats.has(key):
+		return _mats[key]
+	var d := sm.duplicate() as ShaderMaterial
+	d.set_shader_parameter("seed_override", 0.37)
+	d.set_meta("moving", true)
+	_mats[key] = d
+	return d
+
+
+## Give every craft material under a node its moving variant.
+static func make_moving(root: Node) -> void:
+	var stack: Array = [root]
+	while not stack.is_empty():
+		var n: Node = stack.pop_back()
+		for c in n.get_children():
+			stack.append(c)
+		if n is GeometryInstance3D:
+			var g := n as GeometryInstance3D
+			if g.material_override:
+				g.material_override = moving(g.material_override)
+
+
 static func cellophane(color: Color) -> ShaderMaterial:
 	var key := "cello|" + color.to_html()
 	if _mats.has(key):

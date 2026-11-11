@@ -303,6 +303,7 @@ static func build(id: String, viewmodel: bool, team_color := Color(0.2, 0.28, 0.
 	root.set_meta("ads_z", ads_z)
 	if not viewmodel:
 		_bake(root)
+		Craft.make_moving(root)
 	return root
 
 
@@ -757,4 +758,6 @@ static func frag(viewmodel: bool) -> Node3D:
 	Craft.box(root, Vector3(0.012, 0.063, 0), Vector3(0.03, 0.004, 0.014), steel, Vector3(0, 0, -0.1), sh)
 	Craft.part(root, Craft.torus_ring(0.012, 0.0025), bright, Vector3(-0.024, 0.058, 0), Vector3(PI * 0.5, 0, 0), Vector3.ONE, sh)
 	Craft.box(root, Vector3(-0.012, 0.056, 0), Vector3(0.016, 0.002, 0.002), bright, Vector3.ZERO, sh)
+	if not viewmodel:
+		Craft.make_moving(root)
 	return root

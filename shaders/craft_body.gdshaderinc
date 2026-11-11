@@ -20,6 +20,10 @@ uniform float wear = 1.0;
 // Model-maker weathering for painted parts (guns, gear): rubbed paint and
 // dry-brushed highlights on edges. 0 = off.
 uniform float dry_brush = 0.0;
+// Per-object variation normally comes from where the object stands in the
+// world. Things that move (first-person arms, soldiers, their guns) set a
+// fixed seed instead, so their patterns don't re-roll as they move.
+uniform float seed_override = -1.0;
 uniform float bumps = 1.0;
 uniform bool box_edges = true;
 // Cut felt/paper pieces: 1 = caps face local Z (cut-outs), 2 = caps face Y
@@ -72,7 +76,11 @@ void vertex() {
 	v_lnormal = NORMAL;
 	v_scale = vec3(length(MODEL_MATRIX[0].xyz), length(MODEL_MATRIX[1].xyz), length(MODEL_MATRIX[2].xyz));
 	vec3 o = MODEL_MATRIX[3].xyz;
-	v_seed = c_hash(o.xz * 0.731 + o.y * 1.37);
+#ifdef VIEWMODEL
+	v_seed = seed_override >= 0.0 ? seed_override : 0.37;
+#else
+	v_seed = seed_override >= 0.0 ? seed_override : c_hash(o.xz * 0.731 + o.y * 1.37);
+#endif
 	v_world = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 	v_color = COLOR.rgb;
 #ifdef VIEWMODEL
