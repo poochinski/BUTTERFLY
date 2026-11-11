@@ -693,7 +693,7 @@ func _spawn_points() -> void:
 func _bake_navigation() -> void:
 	var nm := NavigationMesh.new()
 	nm.geometry_parsed_geometry_type = NavigationMesh.PARSED_GEOMETRY_STATIC_COLLIDERS
-	nm.geometry_collision_mask = MapBuilder.WORLD_LAYER
+	nm.geometry_collision_mask = MapBuilder.WORLD_LAYER | MapBuilder.GLASS_LAYER
 	nm.agent_radius = 0.5
 	nm.agent_height = 1.75
 	nm.agent_max_climb = 0.25

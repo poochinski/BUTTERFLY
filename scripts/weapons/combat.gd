@@ -24,10 +24,18 @@ static func fire(shooter: Soldier, origin: Vector3, dir: Vector3, weapon: Weapon
 		if hit.is_empty():
 			if i < 2:
 				Fx.tracer(muzzle_pos, end)
+				var gq0 := PhysicsRayQueryParameters3D.create(origin, end, MapBuilder.GLASS_LAYER)
+				var ghit0 := space.intersect_ray(gq0)
+				if not ghit0.is_empty():
+					Fx.glass_hit(ghit0["position"], ghit0["normal"])
 			continue
 		end = hit["position"]
 		if i < 2:
 			Fx.tracer(muzzle_pos, end)
+			var gq := PhysicsRayQueryParameters3D.create(origin, end, MapBuilder.GLASS_LAYER)
+			var ghit := space.intersect_ray(gq)
+			if not ghit.is_empty():
+				Fx.glass_hit(ghit["position"], ghit["normal"])
 		var col = hit["collider"]
 		if col is Soldier:
 			var victim: Soldier = col

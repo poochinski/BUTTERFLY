@@ -45,7 +45,7 @@ var _spawn_protect := 0.0
 func _ready() -> void:
 	add_to_group("soldiers")
 	collision_layer = 2
-	collision_mask = 1 | 2
+	collision_mask = 1 | 2 | MapBuilder.GLASS_LAYER
 	floor_max_angle = deg_to_rad(46.0)
 	floor_snap_length = 0.45
 	_capsule = CapsuleShape3D.new()

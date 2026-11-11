@@ -208,7 +208,7 @@ class Kit:
 		# Brightness and windage turrets with their caps.
 		Craft.part(parent, Craft.cylinder(0.009, 0.009, 0.012, 12), black, Vector3(0, cy + 0.026, -f), Vector3.ZERO, Vector3.ONE, shadows)
 		Craft.part(parent, Craft.cylinder(0.011, 0.011, 0.012, 12), black, Vector3(0.026, cy, -f), Vector3(0, 0, PI * 0.5), Vector3.ONE, shadows)
-		var lens_d := Craft.part(parent, Craft.cylinder(0.0195, 0.0195, 0.002, 18), Craft.cellophane(Color(1.0, 0.62, 0.42, 0.16)), Vector3(0, cy, -(f + 0.04)), Vector3(PI * 0.5, 0, 0), Vector3.ONE, false)
+		var lens_d := Craft.part(parent, Craft.cylinder(0.0195, 0.0195, 0.002, 18), Craft.cellophane(Color(0.86, 0.93, 0.96, 0.05)), Vector3(0, cy, -(f + 0.04)), Vector3(PI * 0.5, 0, 0), Vector3.ONE, false)
 		lens_d.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		Craft.part(parent, Craft.sphere(0.0022, 8), glow_red, Vector3(0, cy, -(f + 0.035)), Vector3.ZERO, Vector3.ONE, false)
 		return cy

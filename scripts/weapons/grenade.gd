@@ -11,7 +11,7 @@ func setup(by: Soldier, pos: Vector3, velocity: Vector3, fuse_left: float) -> vo
 	owner_soldier = by
 	fuse = fuse_left
 	collision_layer = 4
-	collision_mask = 1
+	collision_mask = 1 | MapBuilder.GLASS_LAYER
 	mass = 0.4
 	continuous_cd = true
 	var mat := PhysicsMaterial.new()

@@ -40,7 +40,7 @@ func _setup_roots() -> void:
 func _bake_nav(aabb: AABB, cell := 0.25) -> void:
 	var nm := NavigationMesh.new()
 	nm.geometry_parsed_geometry_type = NavigationMesh.PARSED_GEOMETRY_STATIC_COLLIDERS
-	nm.geometry_collision_mask = MapBuilder.WORLD_LAYER
+	nm.geometry_collision_mask = MapBuilder.WORLD_LAYER | MapBuilder.GLASS_LAYER
 	nm.agent_radius = 0.5
 	nm.agent_height = 1.75
 	nm.agent_max_climb = 0.3

@@ -5,6 +5,8 @@ extends RefCounted
 ## so bots can path around them; decoration lives elsewhere.
 
 const WORLD_LAYER := 1
+## Window glass: blocks movement, but bullets and sight lines pass through.
+const GLASS_LAYER := 8
 
 var nav_root: Node3D
 var deco_root: Node3D
@@ -19,6 +21,8 @@ func _init(nav: Node3D, deco: Node3D) -> void:
 func solid(pos: Vector3, size: Vector3, material: Material, rot_y := 0.0, visible := true) -> StaticBody3D:
 	var body := StaticBody3D.new()
 	body.collision_layer = WORLD_LAYER
+	if material is ShaderMaterial and (material as ShaderMaterial).shader == Craft.CELLO_SHADER:
+		body.collision_layer = GLASS_LAYER
 	body.collision_mask = 0
 	body.position = pos
 	body.rotation.y = rot_y

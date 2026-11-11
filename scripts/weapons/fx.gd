@@ -61,7 +61,7 @@ static func casing(pos: Vector3, basis: Basis, kind := 0) -> void:
 		return
 	var body := RigidBody3D.new()
 	body.collision_layer = 0
-	body.collision_mask = 1
+	body.collision_mask = 1 | MapBuilder.GLASS_LAYER
 	body.mass = 0.02
 	body.continuous_cd = true
 	var size: Vector3 = [Vector3(0.011, 0.011, 0.045), Vector3(0.01, 0.01, 0.02), Vector3(0.02, 0.02, 0.06), Vector3(0.015, 0.015, 0.07)][kind]
@@ -112,7 +112,7 @@ static func dropped_mag(mag: Node3D) -> void:
 		return
 	var body := RigidBody3D.new()
 	body.collision_layer = 0
-	body.collision_mask = 1
+	body.collision_mask = 1 | MapBuilder.GLASS_LAYER
 	body.mass = 0.4
 	var col := CollisionShape3D.new()
 	var shape := BoxShape3D.new()
@@ -135,6 +135,48 @@ static func dropped_mag(mag: Node3D) -> void:
 		if is_instance_valid(old):
 			old.queue_free()
 	_later(body, 12.0)
+
+
+static var _glass_marks: Array = []
+
+
+## A round through a window: a glint of cellophane shards and a little
+## punched star left in the pane.
+static func glass_hit(pos: Vector3, normal: Vector3) -> void:
+	if root == null:
+		return
+	var p := CPUParticles3D.new()
+	p.one_shot = true
+	p.emitting = false
+	p.amount = 8
+	p.lifetime = 0.6
+	p.explosiveness = 1.0
+	p.direction = normal
+	p.spread = 70.0
+	p.initial_velocity_min = 1.0
+	p.initial_velocity_max = 2.5
+	p.gravity = Vector3(0, -6, 0)
+	p.scale_amount_min = 0.3
+	p.scale_amount_max = 0.6
+	p.mesh = _scrap()
+	p.material_override = Craft.cellophane(Color(0.85, 0.92, 0.95, 0.6))
+	p.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	root.add_child(p)
+	p.global_position = pos
+	p.emitting = true
+	_later(p, 0.8)
+	var star := MeshInstance3D.new()
+	star.mesh = Craft.cutout(Craft.star_points(0.05, 0.015, 7), 0.002)
+	star.material_override = Craft.mat(Craft.Kind.PAPER, Color(0.92, 0.94, 0.95), 0, Color.WHITE, 1.0, 0.0, false)
+	star.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	root.add_child(star)
+	var up := Vector3.UP if absf(normal.dot(Vector3.UP)) < 0.9 else Vector3.RIGHT
+	star.global_transform = Transform3D(Basis.looking_at(-normal, up).rotated(normal, randf() * TAU), pos + normal * 0.004)
+	_glass_marks.append(star)
+	if _glass_marks.size() > 60:
+		var old = _glass_marks.pop_front()
+		if is_instance_valid(old):
+			old.queue_free()
 
 
 static func tracer(from: Vector3, to: Vector3, color := Color(1.0, 0.82, 0.55)) -> void:
