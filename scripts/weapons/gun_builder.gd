@@ -95,6 +95,17 @@ class Kit:
 	func _o(m: ShaderMaterial) -> Material:
 		return Craft.outlined(m, ow, vm)
 
+	## Material slots used by the Blender guns (tools/blender/gunkit.py).
+	func slot_mats() -> Dictionary:
+		return {
+			"paint": paint, "paint_core": paint_core, "furn": furn, "furn_core": furn_core,
+			"groove": groove, "black": black, "rubber": rubber, "steel": steel, "bright": bright,
+			"brass": brass, "pin": pin_m, "tape": tape, "team": team, "web": web, "white": white,
+			"glow_red": glow_red, "glass": glass, "lens": lens,
+			"lens_clear": Craft.cellophane(Color(0.86, 0.93, 0.96, 0.05)),
+			"hull": Craft.mat(Craft.Kind.PLASTIC, Color(0.55, 0.12, 0.1), 0, Color.WHITE, 1.0, 0.0, false, vm),
+		}
+
 	## A part cut from a side profile. pts are (forward, up) in metres.
 	## Laminated: a kraft core with thinner painted skins either side.
 	func prof(parent: Node3D, pts: Array, thick: float, skin: Material, core: Material = null, x := 0.0) -> Node3D:
@@ -283,6 +294,76 @@ class Kit:
 		return cy
 
 
+const GUN_MODEL := "guns.glb"
+## Where each Blender gun's sling hangs, and its sight mounts:
+## [sling a, sling c, sag], [optic f, optic base y, irons rear f, irons
+## front f, front sight floor (or -1)].
+const MODEL_SLINGS := {
+	"rifle": [Vector3(-0.026, 0.04, 0.44), Vector3(-0.024, 0.01, -0.3), 0.13],
+	"ak": [Vector3(-0.012, 0.03, 0.62), Vector3(-0.022, -0.03, -0.28), 0.15],
+	"smg": [Vector3(-0.028, 0.03, 0.2), Vector3(-0.028, 0.02, -0.27), 0.11],
+	"sniper": [Vector3(-0.026, 0.0, 0.62), Vector3(-0.027, -0.04, -0.33), 0.16],
+	"shotgun": [Vector3(-0.016, 0.02, 0.71), Vector3(-0.024, -0.03, -0.3), 0.14],
+	"lmg": [Vector3(-0.03, 0.03, 0.4), Vector3(-0.026, 0.0, -0.36), 0.15],
+	"dmr": [Vector3(-0.03, 0.03, 0.46), Vector3(-0.024, 0.0, -0.32), 0.14],
+}
+const MODEL_SIGHTS := {
+	"rifle": [0.07, 0.106, -0.035, 0.455, -1.0],
+	"smg": [0.07, 0.093, -0.04, 0.24, -1.0],
+	"lmg": [0.08, 0.126, 0.02, 0.755, 0.072],
+	"dmr": [0.08, 0.098, -0.03, 0.47, -1.0],
+}
+const FIXED_SIGHT := {"ak": 0.112, "sniper": 0.13, "shotgun": 0.088, "pistol": 0.093, "revolver": 0.098}
+
+
+## A gun modelled in Blender (tools/blender/build_guns.py): the body and
+## its moving parts from guns.glb, sights and mounts placed by attachment,
+## and the procedural sling. Returns the sight height.
+static func _modelled(r: Node3D, second: Node3D, k: Kit, model: String) -> float:
+	var mats := k.slot_mats()
+	var put := func(parent: Node3D, part_name: String, pos := Vector3.ZERO) -> void:
+		ModelLib.part(parent, GUN_MODEL, part_name, mats, pos, Vector3.ZERO, Vector3.ONE, k.shadows)
+	put.call(r, model + "_body")
+	for part_name: String in [model + "_mag", model + "_pump"]:
+		if ModelLib.has(GUN_MODEL, part_name):
+			put.call(second, part_name)
+	for extra: String in ["charge", "slide"]:
+		if ModelLib.has(GUN_MODEL, model + "_" + extra):
+			var n := Craft.pivot(r, Vector3.ZERO)
+			n.name = extra.capitalize()
+			put.call(n, model + "_" + extra)
+			r.set_meta(extra, n)
+	if ModelLib.has(GUN_MODEL, model + "_bolt"):
+		var b := Craft.pivot(r, Vector3(0, 0.072, 0))
+		b.name = "Bolt"
+		put.call(b, model + "_bolt")
+		r.set_meta("bolt", b)
+	if MODEL_SLINGS.has(model):
+		var sl: Array = MODEL_SLINGS[model]
+		k.sling(r, sl[0], sl[1], sl[2])
+	var optic := k.att if k.att in ["reddot", "holo", "acog"] else ""
+	var rise := {"reddot": 0.032, "holo": 0.03, "acog": 0.042}
+	if MODEL_SIGHTS.has(model):
+		var sg: Array = MODEL_SIGHTS[model]
+		if optic != "":
+			put.call(r, "opt_" + optic, Vector3(0, sg[1], -sg[0]))
+			return float(sg[1]) + float(rise[optic])
+		put.call(r, "irons_rear", Vector3(0, sg[1], -sg[2]))
+		put.call(r, "irons_front", Vector3(0, sg[1], -sg[3]))
+		if float(sg[4]) >= 0.0:
+			k.box(r, sg[3], (float(sg[4]) + float(sg[1])) * 0.5, Vector3(0.016, float(sg[1]) - float(sg[4]), 0.02), k.black)
+		return float(sg[1]) + 0.032
+	if model == "ak" and optic != "":
+		put.call(r, "ak_mount")
+		put.call(r, "opt_" + optic, Vector3(0, 0.096, -0.07))
+		return 0.096 + float(rise[optic])
+	if model == "shotgun" and k.att == "reddot":
+		put.call(r, "shotgun_rail")
+		put.call(r, "opt_reddot", Vector3(0, 0.083, -0.07))
+		return 0.083 + 0.032
+	return float(FIXED_SIGHT.get(model, 0.1))
+
+
 static func build(id: String, viewmodel: bool, team_color := Color(0.2, 0.28, 0.44), att := "") -> Node3D:
 	var w := WeaponDB.get_data(id)
 	var root := Node3D.new()
@@ -300,24 +381,25 @@ static func build(id: String, viewmodel: bool, team_color := Color(0.2, 0.28, 0.
 	root.add_child(mag)
 	var sight_y := 0.1
 	var left := Vector3(0, 0.0, -0.33)
+	var modelled := ModelLib.has(GUN_MODEL, String(w["model"]) + "_body")
 	match String(w["model"]):
 		"rifle":
-			sight_y = _m4(root, mag, k)
+			sight_y = _modelled(root, mag, k, "rifle") if modelled else _m4(root, mag, k)
 			muzzle.position = Vector3(0, 0.072, -0.73)
 			eject.position = Vector3(0.026, 0.074, -0.06)
 			left = Vector3(0, 0.035, -0.34)
 		"ak":
-			sight_y = _ak(root, mag, k)
+			sight_y = _modelled(root, mag, k, "ak") if modelled else _ak(root, mag, k)
 			muzzle.position = Vector3(0, 0.05, -0.74)
 			eject.position = Vector3(0.026, 0.068, -0.1)
 			left = Vector3(0, 0.03, -0.34)
 		"smg":
-			sight_y = _smg(root, mag, k)
+			sight_y = _modelled(root, mag, k, "smg") if modelled else _smg(root, mag, k)
 			muzzle.position = Vector3(0, 0.06, -0.46)
 			eject.position = Vector3(0.028, 0.06, -0.08)
 			left = Vector3(0, -0.035, -0.27)
 		"sniper":
-			sight_y = _sniper(root, mag, k)
+			sight_y = _modelled(root, mag, k, "sniper") if modelled else _sniper(root, mag, k)
 			muzzle.position = Vector3(0, 0.07, -1.03)
 			eject.position = Vector3(0.024, 0.08, -0.06)
 			left = Vector3(0, 0.03, -0.4)
@@ -325,28 +407,28 @@ static func build(id: String, viewmodel: bool, team_color := Color(0.2, 0.28, 0.
 			var pump := Node3D.new()
 			pump.name = "Pump"
 			root.add_child(pump)
-			sight_y = _shotgun(root, pump, k)
+			sight_y = _modelled(root, pump, k, "shotgun") if modelled else _shotgun(root, pump, k)
 			root.set_meta("pump", pump)
 			muzzle.position = Vector3(0, 0.068, -0.8)
 			eject.position = Vector3(0.028, 0.05, -0.1)
 			left = Vector3(0, 0.02, -0.42)
 		"pistol":
-			sight_y = _pistol(root, mag, k)
+			sight_y = _modelled(root, mag, k, "pistol") if modelled else _pistol(root, mag, k)
 			muzzle.position = Vector3(0, 0.068, -0.195)
 			eject.position = Vector3(0.012, 0.085, -0.07)
 			left = Vector3(-0.025, -0.045, 0.0)
 		"lmg":
-			sight_y = _lmg(root, mag, k)
+			sight_y = _modelled(root, mag, k, "lmg") if modelled else _lmg(root, mag, k)
 			muzzle.position = Vector3(0, 0.06, -0.83)
 			eject.position = Vector3(0.03, 0.05, -0.08)
 			left = Vector3(0, 0.02, -0.36)
 		"dmr":
-			sight_y = _dmr(root, mag, k)
+			sight_y = _modelled(root, mag, k, "dmr") if modelled else _dmr(root, mag, k)
 			muzzle.position = Vector3(0, 0.055, -0.91)
 			eject.position = Vector3(0.027, 0.07, -0.1)
 			left = Vector3(0, 0.02, -0.4)
 		"revolver":
-			sight_y = _revolver(root, mag, k)
+			sight_y = _modelled(root, mag, k, "revolver") if modelled else _revolver(root, mag, k)
 			muzzle.position = Vector3(0, 0.068, -0.255)
 			eject.position = Vector3(0.0, 0.06, -0.05)
 			left = Vector3(-0.025, -0.045, 0.0)
@@ -389,7 +471,10 @@ static func build(id: String, viewmodel: bool, team_color := Color(0.2, 0.28, 0.
 			ads_z = -0.32
 	root.set_meta("ads_z", ads_z)
 	if not viewmodel:
-		_bake(root)
+		# Modelled guns are already a handful of meshes; only the old
+		# procedural guns need merging.
+		if not modelled:
+			_bake(root)
 		Craft.make_moving(root)
 	return root
 
@@ -415,16 +500,22 @@ static func _bake(root: Node3D, direct_only := false) -> void:
 	for mi in found:
 		xfs[mi] = _rel(root, mi)
 	for mi in found:
-		var mat := mi.material_override
-		if mat == null or mi.mesh == null:
+		if mi.mesh == null:
 			continue
-		if not groups.has(mat):
-			groups[mat] = [PackedVector3Array(), PackedVector3Array(), PackedVector2Array(), PackedInt32Array()]
-			order.append(mat)
-		var g: Array = groups[mat]
 		var xf: Transform3D = xfs[mi]
 		var nb := xf.basis.inverse().transposed()
 		for si in mi.mesh.get_surface_count():
+			var mat: Material = mi.material_override
+			if mat == null:
+				mat = mi.get_surface_override_material(si)
+			if mat == null:
+				mat = mi.mesh.surface_get_material(si)
+			if mat == null:
+				continue
+			if not groups.has(mat):
+				groups[mat] = [PackedVector3Array(), PackedVector3Array(), PackedVector2Array(), PackedInt32Array()]
+				order.append(mat)
+			var g: Array = groups[mat]
 			var arr := mi.mesh.surface_get_arrays(si)
 			var verts: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
 			var norms = arr[Mesh.ARRAY_NORMAL]
@@ -891,7 +982,7 @@ static func _dmr(r: Node3D, mag: Node3D, k: Kit) -> float:
 		k.pin(r, f, 0.025, 0.027)
 	# Adjustable stock with a cheek riser.
 	k.tube(r, -0.33, -0.07, 0.065, 0.016, k.black)
-	k.prof(r, [Vector2(-0.14, 0.1), Vector2(-0.14, 0.03), Vector2(-0.33, 0.004), Vector2(-0.345, 0.055), Vector2(-0.335, 0.11), Vector2(-0.2, 0.12)], 0.044, k.furn, k.furn_core)
+	k.prof(r, [Vector2(-0.14, 0.1), Vector2(-0.14, 0.03), Vector2(-0.33, 0.004), Vector2(-0.345, 0.055), Vector2(-0.335, 0.098), Vector2(-0.2, 0.104)], 0.044, k.furn, k.furn_core)
 	k.box(r, -0.35, 0.056, Vector3(0.046, 0.1, 0.014), k.rubber)
 	k.wrap(r, -0.25, 0.06, Vector2(0.044, 0.06), k.team, 0.014)
 	k.prof(r, [Vector2(-0.005, 0.004), Vector2(0.045, 0.004), Vector2(0.02, -0.105), Vector2(-0.032, -0.098)], 0.036, k.furn, k.furn_core)

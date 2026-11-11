@@ -248,6 +248,8 @@ func _build_armory(shot: int) -> void:
 		[Vector3(0.2, 0.7, 1.05), Vector3(0.2, 0.2, 0.2)],
 		[Vector3(1.25, 0.55, 0.95), Vector3(1.25, 0.1, 0.35)],
 		[Vector3(0.3, 2.6, 1.6), Vector3(0.3, 0.1, -0.05)],
+		[Vector3(-2.15, 1.68, 0.95), Vector3(-2.4, 1.62, 0.2)],
+		[Vector3(2.15, 1.68, 0.95), Vector3(2.4, 1.62, 0.2)],
 	]
 	var v: Array = views[clampi(shot, 0, views.size() - 1)]
 	var from: Vector3 = base + v[0]

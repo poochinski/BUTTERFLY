@@ -123,6 +123,12 @@ static func make_moving(root: Node) -> void:
 			var g := n as GeometryInstance3D
 			if g.material_override:
 				g.material_override = moving(g.material_override)
+		if n is MeshInstance3D and (n as MeshInstance3D).mesh:
+			var mi := n as MeshInstance3D
+			for i in mi.mesh.get_surface_count():
+				var sm := mi.get_surface_override_material(i)
+				if sm:
+					mi.set_surface_override_material(i, moving(sm))
 
 
 static func cellophane(color: Color) -> ShaderMaterial:

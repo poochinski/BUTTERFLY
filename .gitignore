@@ -5,3 +5,5 @@
 *.translation
 export_presets.cfg
 /builds/
+__pycache__/
+*.pyc

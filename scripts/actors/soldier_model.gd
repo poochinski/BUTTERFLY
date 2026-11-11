@@ -28,6 +28,7 @@ var _dead := 0.0
 var _crouch := 0.0
 var _prone := 0.0
 var _built := false
+var _modelled := false
 var _time := 0.0
 var _reload := 0.0
 
@@ -47,7 +48,106 @@ const SKIN_TONES := [Color(0.94, 0.8, 0.67), Color(0.86, 0.68, 0.52), Color(0.72
 var look_seed := randi()
 
 
+const MODEL := "soldier.glb"
+const HAIR := [Color(0.12, 0.09, 0.07), Color(0.24, 0.16, 0.1), Color(0.45, 0.32, 0.18), Color(0.1, 0.1, 0.1), Color(0.55, 0.42, 0.28)]
+
+
+## The jointed figure modelled in Blender (tools/blender/build_soldier.py):
+## each part hangs on the pivot the animation drives, and every material
+## slot is swapped for a craft material in the soldier's team colours.
 func _build() -> void:
+	if not ModelLib.has(MODEL, "torso"):
+		_build_procedural()
+		return
+	_built = true
+	var rng := RandomNumberGenerator.new()
+	rng.seed = look_seed
+	var cardstock := team == 0
+	var tc: Color = Game.TEAM_COLORS[team]
+	var shirt_c := tc.darkened(0.24) if cardstock else tc.darkened(0.22)
+	var camo2 := tc.lerp(Color(0.24, 0.26, 0.27), 0.5) if cardstock else tc.lerp(Color(0.36, 0.3, 0.22), 0.55)
+	var gear_c := Color(0.44, 0.37, 0.26) if cardstock else Color(0.32, 0.33, 0.23)
+	var skin_c: Color = SKIN_TONES[rng.randi() % SKIN_TONES.size()]
+	var hair_c: Color = HAIR[rng.randi() % HAIR.size()]
+	var flat := func(kind: int, col: Color, pattern := 0, col2 := Color.WHITE, pscale := 1.0) -> Material:
+		return Craft.mat(kind, col, pattern, col2, pscale, 0.0, false)
+	var mats := {
+		"uniform": _m(Craft.Kind.FELT, shirt_c, Craft.Pattern.CAMO, camo2, 7.0),
+		"uniform_dark": flat.call(Craft.Kind.FELT, shirt_c.darkened(0.35)),
+		"pants": _m(Craft.Kind.FELT, tc.darkened(0.22), Craft.Pattern.CAMO, camo2.darkened(0.2), 7.0) if cardstock else _m(Craft.Kind.FELT, Color(0.44, 0.4, 0.3), Craft.Pattern.STITCH, Color(0.3, 0.27, 0.2)),
+		"gear": _m(Craft.Kind.FELT, gear_c, Craft.Pattern.STITCH, gear_c.darkened(0.35)),
+		"webbing": flat.call(Craft.Kind.FELT, gear_c.darkened(0.3)),
+		"black": _m(Craft.Kind.PAPER, Color(0.1, 0.1, 0.11)),
+		"mag": flat.call(Craft.Kind.PAPER, Color(0.13, 0.13, 0.14)),
+		"metal": flat.call(Craft.Kind.FOIL, Color(0.55, 0.56, 0.58)),
+		"skin": Craft.outlined(Craft.mat(Craft.Kind.PAPER, skin_c, 0, Color.WHITE, 1.0, 0.0, false), 0.005),
+		"skin_dark": flat.call(Craft.Kind.PAPER, skin_c.darkened(0.35)),
+		"eye": flat.call(Craft.Kind.PAPER, Color(0.9, 0.89, 0.86)),
+		"iris": flat.call(Craft.Kind.PLASTIC, Color(0.08, 0.06, 0.05)),
+		"hair": flat.call(Craft.Kind.FELT, hair_c),
+		"glove": _m(Craft.Kind.FELT, Color(0.13, 0.13, 0.14) if cardstock else Color(0.3, 0.24, 0.17)),
+		"boot": _m(Craft.Kind.FELT, Color(0.42, 0.34, 0.24) if cardstock else Color(0.24, 0.17, 0.12), Craft.Pattern.STITCH, Color(0.2, 0.16, 0.12)),
+		"sole": flat.call(Craft.Kind.PAPER, Color(0.08, 0.08, 0.08)),
+		"lace": flat.call(Craft.Kind.FELT, Color(0.16, 0.14, 0.12)),
+		"patch": flat.call(Craft.Kind.FELT, tc, Craft.Pattern.BANDS, tc.lightened(0.45), 60.0),
+		"knit": _m(Craft.Kind.KNIT, [Color(0.18, 0.18, 0.19), Color(0.26, 0.27, 0.21), Color(0.3, 0.22, 0.16)][rng.randi() % 3]),
+		"shemagh": _m(Craft.Kind.FELT, Color(0.78, 0.74, 0.64), Craft.Pattern.CHECKER, Color(0.5, 0.22, 0.18), 45.0),
+	}
+	for k in mats:
+		mats[k] = Craft.moving(mats[k])
+	var put := func(parent: Node3D, part_name: String) -> void:
+		ModelLib.part(parent, MODEL, part_name, mats)
+
+	hips = Craft.pivot(self, Vector3(0, 0.95, 0))
+	put.call(hips, "pelvis")
+	if cardstock or rng.randf() < 0.5:
+		put.call(hips, "belt_gear")
+	torso = Craft.pivot(hips, Vector3(0, 0.08, 0))
+	put.call(torso, "torso")
+	put.call(torso, "carrier" if cardstock else "rig")
+	head = Craft.pivot(torso, Vector3(0, 0.47, 0))
+	put.call(head, "head_a" if rng.randf() < 0.5 else "head_b")
+	if cardstock:
+		put.call(head, "helmet")
+		put.call(head, "headset")
+	else:
+		put.call(head, "beanie")
+		var masked := rng.randf() < 0.65
+		if masked:
+			put.call(head, "shemagh")
+		elif rng.randf() < 0.6:
+			put.call(head, "beard")
+	for side: float in [-1.0, 1.0]:
+		var sh := Craft.pivot(torso, Vector3(side * 0.19, 0.42, 0))
+		put.call(sh, "upper_arm_patch" if side < 0.0 and cardstock else "upper_arm")
+		var el := Craft.pivot(sh, Vector3(0, -0.29, 0))
+		put.call(el, "forearm")
+		if side < 0.0:
+			arm_l = sh
+			forearm_l = el
+		else:
+			arm_r = sh
+			forearm_r = el
+	for side: float in [-1.0, 1.0]:
+		var hp := Craft.pivot(hips, Vector3(side * 0.095, -0.06, 0))
+		put.call(hp, "thigh_L" if side < 0.0 else "thigh_R")
+		var kn := Craft.pivot(hp, Vector3(0, -0.43, 0))
+		put.call(kn, "shin")
+		if cardstock:
+			put.call(kn, "kneepad")
+		if side < 0.0:
+			leg_l = hp
+			knee_l = kn
+		else:
+			leg_r = hp
+			knee_r = kn
+	gun_mount = Craft.pivot(torso, Vector3(0.1, 0.36, -0.3))
+	_modelled = true
+
+
+## The original all-procedural doll, kept as a fallback if the modelled
+## parts are missing.
+func _build_procedural() -> void:
 	_built = true
 	var rng := RandomNumberGenerator.new()
 	rng.seed = look_seed
@@ -204,6 +304,9 @@ func _build() -> void:
 		GunBuilder._bake(n, true)
 
 
+var _shadow_only := false
+
+
 func set_weapon(id: String, att := "") -> void:
 	if not _built:
 		_build()
@@ -211,6 +314,8 @@ func set_weapon(id: String, att := "") -> void:
 		gun.queue_free()
 	gun = GunBuilder.build(id, false, Game.TEAM_COLORS[team], att)
 	gun_mount.add_child(gun)
+	if _shadow_only:
+		_set_cast(gun, GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY)
 
 
 func muzzle() -> Node3D:
@@ -236,6 +341,7 @@ func reset() -> void:
 
 
 func set_shadow_only(on: bool) -> void:
+	_shadow_only = on
 	_set_cast(self, GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY if on else GeometryInstance3D.SHADOW_CASTING_SETTING_ON)
 
 
@@ -270,7 +376,7 @@ func animate(delta: float, speed: float, stance: int, pitch: float, sprinting: b
 	leg_r.rotation.x = -s * swing + _crouch * 0.3
 	knee_l.rotation.x = -maxf(0.0, sin(_phase + 1.3)) * 1.0 * amt - _crouch * 1.6
 	knee_r.rotation.x = -maxf(0.0, sin(_phase + 1.3 + PI)) * 1.0 * amt - _crouch * 0.9
-	hips.position.y = 0.84 - _crouch * 0.38 + absf(cos(_phase)) * 0.04 * amt
+	hips.position.y = (0.95 - _crouch * 0.42 if _modelled else 0.84 - _crouch * 0.38) + absf(cos(_phase)) * 0.04 * amt
 	hips.rotation.y = s * 0.1 * amt
 	torso.rotation.x = -_crouch * 0.15 - (0.25 if sprinting else 0.0)
 	torso.rotation.y = -s * 0.08 * amt
@@ -311,7 +417,7 @@ func animate(delta: float, speed: float, stance: int, pitch: float, sprinting: b
 		arm_l.rotation = Vector3(1.45 + aim - rl * 0.5 - mag_hand * 0.45, -0.55 + rl * 0.25, 0.0)
 		forearm_l.rotation.x = 0.1 + rl * 0.5
 		gun_mount.rotation = Vector3(aim + _kick * 0.15 - rl * 0.45, rl * 0.2, rl * 0.55)
-	gun_mount.position = Vector3(0.12, 0.33 - rl * 0.06, -0.25 + _kick * 0.05)
+	gun_mount.position = (Vector3(0.1, 0.36, -0.3) if _modelled else Vector3(0.12, 0.33, -0.25)) + Vector3(0, -rl * 0.06, _kick * 0.05)
 
 
 func _animate_death(delta: float) -> void:
