@@ -78,6 +78,9 @@ static func container(b: MapBuilder, pos: Vector3, yaw: float, col: Color, label
 static func crate(b: MapBuilder, pos: Vector3, size: float, yaw: float, col := Craft.KRAFT) -> StaticBody3D:
 	var m := Craft.mat(Craft.Kind.CARDBOARD, col)
 	var body := b.solid(pos + Vector3(0, size * 0.5, 0), Vector3(size, size, size), m, yaw)
+	# Hand-placed: never quite square.
+	body.rotation.x = randf_range(-0.025, 0.025)
+	body.rotation.z = randf_range(-0.025, 0.025)
 	var tape := Craft.mat(Craft.Kind.TAPE, Color(0.93, 0.86, 0.66))
 	# Top flaps: usually taped shut, sometimes popped open.
 	var open := randf() < 0.3

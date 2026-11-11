@@ -73,6 +73,13 @@ nearest enemy when you aim down sights.
     (middle).
   - The **open apron** with a business jet (south).
 
+## Environment: felt and hand-made construction
+
+The ground is now felt, laid like a crafter's diorama base: patchwork
+tarmac slabs, layered lawns with fringe-cut grass, mud and puddles, felt
+gravel, stitched road markings. Buildings are taped, tied with yarn,
+pinned with brads and hot-glued. See `docs/ENVIRONMENT_PASS.md`.
+
 ## New in this update
 
 - **Weapon pickups:** fallen soldiers drop their gun. Walk over a gun you

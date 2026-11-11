@@ -19,12 +19,18 @@ uniform float pattern_scale = 1.0;
 uniform float wear = 1.0;
 uniform float bumps = 1.0;
 uniform bool box_edges = true;
+// Cut felt/paper pieces: 1 = caps face local Z (cut-outs), 2 = caps face Y
+// (ground pieces). Their side walls get the look of a cut edge.
+uniform int side_mode = 0;
+// Merged meshes carry a per-piece tint in their vertex colours.
+uniform bool use_vertex_color = false;
 
 varying vec3 v_local;
 varying vec3 v_lnormal;
 varying vec3 v_scale;
 varying float v_seed;
 varying vec3 v_world;
+varying vec3 v_color;
 
 #ifdef VIEWMODEL
 global uniform float vm_fov_scale;
@@ -65,6 +71,7 @@ void vertex() {
 	vec3 o = MODEL_MATRIX[3].xyz;
 	v_seed = c_hash(o.xz * 0.731 + o.y * 1.37);
 	v_world = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+	v_color = COLOR.rgb;
 #ifdef VIEWMODEL
 	POSITION = PROJECTION_MATRIX * (MODELVIEW_MATRIX * vec4(VERTEX, 1.0));
 	POSITION.xy *= vm_fov_scale;
@@ -110,6 +117,9 @@ void fragment() {
 
 	// Hand-made variation: no two pieces of card are quite the same colour.
 	vec3 base = color.rgb * (0.94 + 0.12 * v_seed);
+	if (use_vertex_color) {
+		base *= v_color;
+	}
 	base *= 0.95 + 0.1 * c_fbm(suv * 0.35);
 
 	// Printed / painted patterns.
@@ -157,9 +167,14 @@ void fragment() {
 		float pid = floor(along / pw);
 		float pf = abs(fract(along / pw) - 0.5) * pw;
 		base *= 0.93 + 0.1 * c_hash(vec2(pid, v_seed));
-		float seam = 1.0 - smoothstep(pw * 0.5 - 0.025, pw * 0.5 - 0.01, pf);
-		base *= mix(0.6, 1.0, seam);
-		h -= (1.0 - seam) * 0.004;
+		// Each sheet overlaps the next: a crisp lit paper edge on one side
+		// of the seam and a soft shadow cast onto the sheet beneath.
+		float fpos = fract(along / pw);
+		float lit_edge = smoothstep(0.986, 0.996, fpos);
+		float shadow = 1.0 - smoothstep(0.0, 0.035, fpos);
+		base *= mix(1.0, 0.62, shadow);
+		base = mix(base, base * 1.18, lit_edge);
+		h += lit_edge * 0.004 - shadow * 0.002;
 		float paint_line = 1.15 + (c_noise(vec2(along * 3.0, v_seed * 9.0)) - 0.5) * 0.06;
 		float band = 1.0 - smoothstep(paint_line - 0.01, paint_line + 0.01, v_world.y);
 		base = mix(base, color2.rgb * (0.94 + 0.1 * c_noise(vec2(along, v_world.y) * 6.0)), band);
@@ -216,17 +231,35 @@ void fragment() {
 		rough = 0.93;
 		spec = 0.22;
 	} else if (kind == 2) {
-		float f1 = c_noise(suv * 170.0);
-		float f2 = c_noise(suv * 38.0);
-		float pill = step(0.97, c_hash(floor(suv * 55.0)));
-		base *= 0.8 + 0.3 * (f1 * 0.6 + f2 * 0.4);
-		base *= 1.0 - pill * 0.15;
-		h = (f1 - 0.5) * 0.002 * bumps + (f2 - 0.5) * 0.002;
+		// Felt: a mat of short fibres lying every which way, blotchy dye,
+		// little pills of fluff, and a soft fuzzy sheen at grazing angles.
+		// pattern_scale > 1 makes the fibres coarser (big ground sheets).
+		vec2 fuv = suv / max(pattern_scale, 0.05);
+		float fa = c_noise(c_rot(fuv, 0.3) * vec2(420.0, 30.0));
+		float fb = c_noise(c_rot(fuv, 1.4) * vec2(420.0, 30.0));
+		float fc = c_noise(c_rot(fuv, 2.5) * vec2(420.0, 30.0));
+		float fibre = max(max(fa, fb), fc);
+		float fine = c_noise(fuv * 260.0);
+		float mottle = c_fbm(fuv * 1.3);
+		float pill = smoothstep(0.82, 0.95, c_noise(fuv * 34.0)) * step(0.55, c_hash(floor(fuv * 34.0)));
+		base *= 0.86 + 0.16 * mottle;
+		base *= 0.82 + 0.22 * fibre + 0.06 * fine;
+		base = mix(base, base * 1.14, pill * 0.6);
+		h = (fibre - 0.5) * 0.0025 * bumps + pill * 0.003 + (mottle - 0.5) * 0.004 * bumps;
 		bevel = 0.03;
-		ink = 0.15;
+		ink = 0.12;
 		rough = 1.0;
-		spec = 0.1;
-		rim = 0.7;
+		spec = 0.08;
+		rim = 0.85;
+		if (side_mode > 0) {
+			vec3 cap = side_mode == 1 ? vec3(0.0, 0.0, 1.0) : vec3(0.0, 1.0, 0.0);
+			if (abs(dot(n, cap)) < 0.5) {
+				// A cut edge: compressed fibres, darker, with fine striations.
+				float st = c_noise(vec2((v_world.x + v_world.z) * 300.0, v_world.y * 25.0));
+				base *= 0.66 + 0.22 * st;
+				h += (st - 0.5) * 0.0015;
+			}
+		}
 	} else if (kind == 3) {
 		vec2 k = uv * vec2(10.0, 12.0) * pattern_scale;
 		vec2 cell = fract(k);

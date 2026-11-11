@@ -43,6 +43,8 @@ func build() -> void:
 	_backdrop()
 	_dressing()
 	_revamp()
+	FeltGround.build(self)
+	Handmade.build(self)
 	_spawn_points()
 	_bake_navigation()
 
@@ -146,23 +148,14 @@ func apply_graphics() -> void:
 # ----------------------------------------------------------------- ground
 
 func _ground() -> void:
-	var asphalt := Craft.mat(Craft.Kind.CARDBOARD, Color(0.35, 0.37, 0.41), 7, Color(0.27, 0.29, 0.32), 1.0, 0.0)
-	b.span(Vector3(-62, -0.5, -42), Vector3(64, 0.0, 30), asphalt)
-	# Terminal and sidewalk floors (visual layers of paper on top).
+	# The collision floor is a slab of dark felt underlay; everything you see
+	# on top of it (felt tarmac, lawns, mud, gravel, markings) is laid by
+	# FeltGround after the rest of the map is built.
+	var underlay := Craft.mat(Craft.Kind.FELT, Color(0.25, 0.23, 0.21), 0, Color.WHITE, 3.0, 0.0)
+	b.span(Vector3(-62, -0.5, -42), Vector3(64, 0.0, 30), underlay)
+	# Terminal floor: construction-paper tiles.
 	var tiles := Craft.mat(Craft.Kind.PAPER, Color(0.96, 0.9, 0.78), Craft.Pattern.CHECKER, Color(0.86, 0.78, 0.66), 0.5, 0.0)
 	b.deco_box(Vector3(-36, 0.01, -4), Vector3(44, 0.02, 52), tiles)
-	var walk := Craft.mat(Craft.Kind.PAPER, Color(0.82, 0.8, 0.76), Craft.Pattern.CHECKER, Color(0.76, 0.74, 0.7), 1.0, 0.0)
-	b.deco_box(Vector3(-36, 0.01, 24), Vector3(44, 0.02, 4), walk)
-	# Taxi lines of yellow yarn and white paper dashes.
-	var yarn := Craft.mat(Craft.Kind.KNIT, Craft.YELLOW, 0, Color.WHITE, 0.6)
-	b.deco_box(Vector3(23, 0.02, -2), Vector3(74, 0.03, 0.28), yarn, Vector3.ZERO, false)
-	b.deco_box(Vector3(10, 0.02, 4), Vector3(0.28, 0.03, 18), yarn, Vector3.ZERO, false)
-	b.deco_box(Vector3(46, 0.02, -12), Vector3(0.28, 0.03, 24), yarn, Vector3.ZERO, false)
-	var white := Craft.mat(Craft.Kind.PAPER, Craft.WHITE)
-	for i in 14:
-		b.deco_box(Vector3(-10 + i * 5.0, 0.02, 20), Vector3(2.6, 0.03, 0.35), white, Vector3.ZERO, false)
-	for i in 10:
-		b.deco_box(Vector3(-11, 0.02, -22 + i * 4.5), Vector3(0.35, 0.03, 2.0), white, Vector3.ZERO, false)
 
 
 # --------------------------------------------------------------- terminal
@@ -587,7 +580,7 @@ func _backdrop() -> void:
 	far.name = "Backdrop"
 	deco.add_child(far)
 	# Runway beyond the south fence.
-	Craft.box(far, Vector3(0, 0.01, 50), Vector3(260, 0.02, 22), Craft.mat(Craft.Kind.PAPER, Color(0.32, 0.33, 0.37), 0, Color.WHITE, 1.0, 0.0))
+	Craft.box(far, Vector3(0, 0.01, 50), Vector3(260, 0.04, 22), Craft.mat(Craft.Kind.FELT, Color(0.3, 0.31, 0.34), 0, Color.WHITE, 1.0, 0.0))
 	for i in 20:
 		Craft.box(far, Vector3(-120 + i * 13.0, 0.03, 50), Vector3(6, 0.02, 0.8), Craft.mat(Craft.Kind.PAPER, Craft.WHITE))
 	Craft.box(far, Vector3(0, -0.1, 0), Vector3(800, 0.1, 800), Craft.mat(Craft.Kind.FELT, Color(0.42, 0.7, 0.36), 0, Color.WHITE, 1.0, 0.0, false), Vector3.ZERO, false)
@@ -674,27 +667,7 @@ func _dressing() -> void:
 	for z: float in [-23.0, -15.0, 18.0]:
 		Dressing.poster(d, Vector3(-13.72, 3.4, z), PI * 0.5, Vector2(1.6, 2.1), rng, titles[t % titles.size()])
 		t += 1
-	# Paper grass and flowers around every edge of the map.
-	var edges := [
-		[Vector3(-58, 0, 26.6), Vector3(60, 0, 26.6)], [Vector3(-58, 0, 29), Vector3(60, 0, 29)],
-		[Vector3(60.6, 0, -38), Vector3(60.6, 0, 26)], [Vector3(63, 0, -40), Vector3(63, 0, 28)],
-		[Vector3(32, 0, -38.6), Vector3(60, 0, -38.6)], [Vector3(-58, 0, 25.4), Vector3(-14, 0, 25.4)],
-		[Vector3(59.3, 0, -36), Vector3(59.3, 0, 24)], [Vector3(34, 0, -37.3), Vector3(58, 0, -37.3)],
-	]
-	for e in edges:
-		var a: Vector3 = e[0]
-		var b2: Vector3 = e[1]
-		var n := int(a.distance_to(b2) / 1.6)
-		for i in n:
-			var p := a.lerp(b2, (i + rng.randf()) / n) + Vector3(rng.randf_range(-0.6, 0.6), 0, rng.randf_range(-0.6, 0.6))
-			if rng.randf() < 0.18:
-				Dressing.flower(d, p, rng)
-			else:
-				Dressing.grass(d, p, rng.randf_range(0.7, 1.3), rng, rng.randf() < 0.25)
-	for c: Vector3 in [Vector3(-50, 0, 24.2), Vector3(-28, 0, 24.2), Vector3(-55.5, 0, -18), Vector3(-55.5, 0, 19.5), Vector3(-16.5, 0, 19.5)]:
-		for i in 4:
-			var a2 := rng.randf() * TAU
-			Dressing.grass(d, c + Vector3(cos(a2), 0, sin(a2)) * 0.9, 0.6, rng)
+
 
 
 # ----------------------------------------------------------------- revamp
@@ -752,13 +725,12 @@ func _revamp() -> void:
 	Architecture.parapet(r, Vector3(-14.2, 5.3, -38.2), Vector3(32.2, 5.3, -25.8), 0.5, Craft.PURPLE, Craft.YELLOW)
 	Architecture.rooftop(r, Vector3(9, 5.3, -32), rng, 4, Vector2(18, 3))
 	# Tarmac: stand markings and ground support equipment.
-	var stand := Architecture.letters(r, "07", Vector3(-8.5, 0.03, 6.0), 0.0, 2.6, Craft.WHITE, 0.02)
+	var stand := Architecture.letters(r, "07", Vector3(-8.5, 0.045, 6.0), 0.0, 2.6, Craft.WHITE, 0.02)
 	stand.rotation = Vector3(-PI * 0.5, PI * 0.5, 0)
-	Craft.box(r, Vector3(-10.2, 0.02, -2), Vector3(0.5, 0.03, 6.0), Craft.mat(Craft.Kind.PAPER, Craft.RED, Craft.Pattern.HAZARD, Craft.WHITE, 1.5), Vector3.ZERO, false)
-	Craft.box(r, Vector3(-7, 0.02, -9.0), Vector3(10.0, 0.03, 2.8), Craft.mat(Craft.Kind.PAPER, Craft.YELLOW, Craft.Pattern.HAZARD, Color(0.3, 0.32, 0.36), 0.6), Vector3.ZERO, false)
+	Craft.box(r, Vector3(-7, 0.045, -9.0), Vector3(10.0, 0.012, 2.8), Craft.mat(Craft.Kind.FELT, Craft.YELLOW, Craft.Pattern.HAZARD, Color(0.3, 0.32, 0.36), 0.6), Vector3.ZERO, false)
 	for i in 6:
 		var arrow := Craft.cutout(PackedVector2Array([Vector2(-0.3, -0.8), Vector2(0.3, -0.8), Vector2(0.3, 0.2), Vector2(0.7, 0.2), Vector2(0, 1.0), Vector2(-0.7, 0.2), Vector2(-0.3, 0.2)]), 0.02)
-		Craft.part(r, arrow, Craft.mat(Craft.Kind.PAPER, Craft.YELLOW, 0, Color.WHITE, 1.0, 0.0, false), Vector3(-2 + i * 9.0, 0.03, 20.0), Vector3(-PI * 0.5, -PI * 0.5, 0))
+		Craft.part(r, arrow, Craft.mat(Craft.Kind.PAPER, Craft.YELLOW, 0, Color.WHITE, 1.0, 0.0, false), Vector3(-2 + i * 9.0, 0.045, 20.0), Vector3(-PI * 0.5, -PI * 0.5, 0))
 	Props.gpu_cart(b, Vector3(-6.8, 0, 1.8), 0.25)
 	Props.belt_loader(b, Vector3(3.2, 0, 4.6), PI, 2.0)
 	Props.tug(b, Vector3(9, 0, 7.5), 0.5)

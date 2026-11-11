@@ -52,6 +52,27 @@ static func mat(kind: int, color: Color, pattern := 0, color2 := Color.WHITE, pa
 	return m
 
 
+## Felt (or paper) for cut pieces: their side walls show a cut edge, and
+## merged meshes can tint each piece through vertex colours.
+static func felt_piece(color: Color, kind := Kind.FELT, side_mode := 2, vertex_color := true, pattern := 0, color2 := Color.WHITE, pattern_scale := 1.0) -> ShaderMaterial:
+	var key := "piece|%d|%s|%d|%s|%d|%s|%.3f" % [kind, color.to_html(), side_mode, vertex_color, pattern, color2.to_html(), pattern_scale]
+	if _mats.has(key):
+		return _mats[key]
+	var m := ShaderMaterial.new()
+	m.shader = CRAFT_SHADER
+	m.set_shader_parameter("kind", kind)
+	m.set_shader_parameter("color", color)
+	m.set_shader_parameter("color2", color2)
+	m.set_shader_parameter("pattern", pattern)
+	m.set_shader_parameter("pattern_scale", pattern_scale)
+	m.set_shader_parameter("wear", 0.0)
+	m.set_shader_parameter("box_edges", false)
+	m.set_shader_parameter("side_mode", side_mode)
+	m.set_shader_parameter("use_vertex_color", vertex_color)
+	_mats[key] = m
+	return m
+
+
 ## Same material with an ink outline pass (for characters, weapons, props).
 static func outlined(base: ShaderMaterial, width := 0.012, viewmodel := false) -> ShaderMaterial:
 	var key := "outline|%d|%.4f|%s" % [base.get_instance_id(), width, viewmodel]
