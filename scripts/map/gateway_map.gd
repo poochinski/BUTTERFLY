@@ -53,11 +53,11 @@ func build() -> void:
 # --------------------------------------------------------------- lighting
 
 func _environment() -> void:
-	# Warm late-afternoon sun, low enough for long, soft shadows.
+	# Neutral mid-afternoon daylight: a real sun, not a stage gel.
 	sun = DirectionalLight3D.new()
 	sun.name = "Sun"
-	sun.light_color = Color(1.0, 0.89, 0.74)
-	sun.light_energy = 1.7
+	sun.light_color = Color(1.0, 0.95, 0.88)
+	sun.light_energy = 1.85
 	sun.light_angular_distance = 1.2
 	sun.shadow_enabled = true
 	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS
@@ -65,13 +65,13 @@ func _environment() -> void:
 	sun.directional_shadow_blend_splits = true
 	sun.shadow_blur = 1.6
 	sun.shadow_bias = 0.04
-	sun.rotation = Vector3(deg_to_rad(-36.0), deg_to_rad(-38.0), 0.0)
+	sun.rotation = Vector3(deg_to_rad(-41.0), deg_to_rad(-38.0), 0.0)
 	add_child(sun)
-	# A cool fill from the sky side keeps shadows blue rather than grey.
+	# A soft sky fill so shadows read as overcast daylight, not black.
 	var fill := DirectionalLight3D.new()
 	fill.name = "SkyFill"
-	fill.light_color = Color(0.62, 0.78, 1.0)
-	fill.light_energy = 0.28
+	fill.light_color = Color(0.78, 0.84, 0.92)
+	fill.light_energy = 0.24
 	fill.shadow_enabled = false
 	fill.sky_mode = DirectionalLight3D.SKY_MODE_LIGHT_ONLY
 	fill.rotation = Vector3(deg_to_rad(-55.0), deg_to_rad(150.0), 0.0)
@@ -86,10 +86,10 @@ func _environment() -> void:
 	env.background_mode = Environment.BG_SKY
 	env.sky = sky
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
-	env.ambient_light_energy = 0.5
+	env.ambient_light_energy = 0.6
 	env.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
-	env.tonemap_mode = Environment.TONE_MAPPER_ACES
-	env.tonemap_exposure = 1.0
+	env.tonemap_mode = Environment.TONE_MAPPER_AGX
+	env.tonemap_exposure = 1.08
 	env.tonemap_white = 6.0
 	env.ssao_radius = 1.4
 	env.ssao_intensity = 2.6
@@ -99,18 +99,18 @@ func _environment() -> void:
 	env.ssil_radius = 4.0
 	env.ssil_intensity = 1.3
 	env.ssil_sharpness = 0.9
-	env.glow_intensity = 0.4
+	env.glow_intensity = 0.25
 	env.glow_bloom = 0.05
 	env.glow_hdr_threshold = 1.0
 	env.glow_blend_mode = Environment.GLOW_BLEND_MODE_SOFTLIGHT
 	env.fog_enabled = true
-	env.fog_light_color = Color(0.84, 0.9, 0.95)
-	env.fog_density = 0.0012
-	env.fog_aerial_perspective = 0.35
+	env.fog_light_color = Color(0.8, 0.83, 0.86)
+	env.fog_density = 0.0022
+	env.fog_aerial_perspective = 0.5
 	env.fog_sky_affect = 0.0
 	env.adjustment_enabled = true
-	env.adjustment_saturation = 1.32
-	env.adjustment_contrast = 1.12
+	env.adjustment_saturation = 1.06
+	env.adjustment_contrast = 1.08
 	env.adjustment_color_correction = _grade()
 	var we := WorldEnvironment.new()
 	we.environment = env
@@ -124,12 +124,12 @@ func _environment() -> void:
 	Game.settings_changed.connect(apply_graphics)
 
 
-## Split-tone grade: cool, slightly teal shadows and warm, creamy highlights,
-## like a photo of a real craft diorama.
+## A gentle photographic grade: barely-cool shadows and neutral, slightly
+## warm highlights, like a well-lit photo of a museum diorama.
 func _grade() -> GradientTexture1D:
 	var g := Gradient.new()
 	g.offsets = PackedFloat32Array([0.0, 0.25, 0.6, 1.0])
-	g.colors = PackedColorArray([Color(0.02, 0.04, 0.09), Color(0.22, 0.26, 0.33), Color(0.66, 0.63, 0.58), Color(1.0, 0.97, 0.9)])
+	g.colors = PackedColorArray([Color(0.03, 0.035, 0.05), Color(0.24, 0.25, 0.27), Color(0.61, 0.6, 0.58), Color(1.0, 0.98, 0.95)])
 	var t := GradientTexture1D.new()
 	t.gradient = g
 	t.width = 256
@@ -155,18 +155,18 @@ func _ground() -> void:
 	var underlay := Craft.mat(Craft.Kind.FELT, Color(0.25, 0.23, 0.21), 0, Color.WHITE, 3.0, 0.0)
 	b.span(Vector3(-62, -0.5, -42), Vector3(64, 0.0, 30), underlay)
 	# Terminal floor: construction-paper tiles.
-	var tiles := Craft.mat(Craft.Kind.PAPER, Color(0.96, 0.9, 0.78), Craft.Pattern.CHECKER, Color(0.86, 0.78, 0.66), 0.5, 0.0)
+	var tiles := Craft.mat(Craft.Kind.PAPER, Color(0.74, 0.72, 0.68), Craft.Pattern.CHECKER, Color(0.66, 0.65, 0.62), 0.5, 0.0)
 	b.deco_box(Vector3(-36, 0.01, -4), Vector3(44, 0.02, 52), tiles)
 
 
 # --------------------------------------------------------------- terminal
 
 func _terminal() -> void:
-	var outer := Craft.mat(Craft.Kind.CARDBOARD, Color(0.95, 0.86, 0.68), Craft.Pattern.WALL, Craft.TEAL, 1.0)
-	var inner := Craft.mat(Craft.Kind.CARDBOARD, Color(0.98, 0.8, 0.55), Craft.Pattern.WALL, Craft.PINK, 1.0)
+	var outer := Craft.mat(Craft.Kind.CARDBOARD, Craft.CONCRETE, Craft.Pattern.WALL, Craft.CONCRETE_DARK, 1.0)
+	var inner := Craft.mat(Craft.Kind.CARDBOARD, Color(0.82, 0.8, 0.76), Craft.Pattern.WALL, Color(0.44, 0.47, 0.5), 1.0)
 	var accent := Craft.mat(Craft.Kind.CARDBOARD, Craft.TEAL)
-	var purple := Craft.mat(Craft.Kind.CARDBOARD, Craft.PURPLE, Craft.Pattern.STITCH, Color(0.9, 0.85, 1.0))
-	var rail_m := Craft.mat(Craft.Kind.CARDBOARD, Craft.YELLOW)
+	var purple := Craft.mat(Craft.Kind.CARDBOARD, Craft.SLATE, Craft.Pattern.STITCH, Color(0.6, 0.62, 0.66))
+	var rail_m := Craft.mat(Craft.Kind.CARDBOARD, Color(0.55, 0.57, 0.6))
 
 	b.wall(Vector3(-58, 0, -30), Vector3(-58, 0, 22), 8.0, 0.5, outer)
 	b.wall(Vector3(-58, 0, -30), Vector3(-14, 0, -30), 8.0, 0.5, outer)
@@ -176,21 +176,27 @@ func _terminal() -> void:
 		Vector4(-29, -26.5, 0, 3), Vector4(-10.5, -7.5, 3, 5.7), Vector4(-6, -2, 0, 3), Vector4(10, 14, 0, 3),
 		Vector4(-24, -12, 1.0, 2.6), Vector4(-1, 9, 1.0, 2.6), Vector4(15, 21, 1.0, 2.6), Vector4(-1, 20, 4.5, 7.2)])
 	# Cellophane in the upper windows.
-	var glass := Craft.cellophane(Color(0.55, 0.85, 1.0, 0.28))
+	var glass := Craft.cellophane(Color(0.58, 0.7, 0.76, 0.3))
 	var g1 := Craft.box(deco, Vector3(-14, 5.85, 9.5), Vector3(0.05, 2.7, 21), glass)
 	g1.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	var g2 := Craft.box(deco, Vector3(-36, 5.75, 22), Vector3(36, 2.5, 0.05), glass)
 	g2.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 
-	# Roof with three cellophane skylights letting sunlight stream in.
+	# Roof with three cellophane skylights letting sunlight stream in. The
+	# underside reads as a timber-slat ceiling; the top is dressed in a sheet
+	# of grey roofing felt, like a real flat roof.
 	var roof := Craft.mat(Craft.Kind.CARDBOARD, Craft.KRAFT)
+	var roof_felt := Craft.mat(Craft.Kind.FELT, Color(0.34, 0.35, 0.37), Craft.Pattern.STITCH, Color(0.42, 0.43, 0.45), 2.0)
 	var cuts := [-58.0, -50.0, -47.0, -38.0, -35.0, -26.0, -23.0, -14.0]
 	for i in range(0, cuts.size(), 2):
 		b.span(Vector3(cuts[i], 8.0, -30.2), Vector3(cuts[i + 1], 8.4, 22.2), roof)
+		_roof_sheet(Vector3(cuts[i], 8.4, -30.2), Vector3(cuts[i + 1], 8.4, 22.2), roof_felt)
 	for i in range(1, cuts.size() - 1, 2):
 		b.span(Vector3(cuts[i], 8.0, -30.2), Vector3(cuts[i + 1], 8.4, -18), roof)
 		b.span(Vector3(cuts[i], 8.0, 18), Vector3(cuts[i + 1], 8.4, 22.2), roof)
-		var sky_glass := Craft.box(deco, Vector3((cuts[i] + cuts[i + 1]) * 0.5, 8.2, 0), Vector3(cuts[i + 1] - cuts[i], 0.05, 36), Craft.cellophane(Color(1.0, 0.95, 0.7, 0.18)))
+		_roof_sheet(Vector3(cuts[i], 8.4, -30.2), Vector3(cuts[i + 1], 8.4, -18), roof_felt)
+		_roof_sheet(Vector3(cuts[i], 8.4, 18), Vector3(cuts[i + 1], 8.4, 22.2), roof_felt)
+		var sky_glass := Craft.box(deco, Vector3((cuts[i] + cuts[i + 1]) * 0.5, 8.2, 0), Vector3(cuts[i + 1] - cuts[i], 0.05, 36), Craft.cellophane(Color(0.9, 0.92, 0.9, 0.15)))
 		sky_glass.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	# A blocker keeps everyone off the roof.
 	b.blocker(Vector3(-36, 9.5, -4), Vector3(44, 2, 52))
@@ -202,7 +208,7 @@ func _terminal() -> void:
 		Vector4(-52.6, -49.4, 0, 1.0), Vector4(-23.6, -20.4, 0, 1.0)])
 	b.wall(Vector3(-17.2, 3, -20), Vector3(-17.2, 3, -7), 1.0, 0.12, rail_m)
 	b.wall(Vector3(-17.2, 3, -7), Vector3(-14.25, 3, -7), 1.0, 0.12, rail_m)
-	var step_m := Craft.mat(Craft.Kind.CARDBOARD, Color(0.9, 0.6, 0.85))
+	var step_m := Craft.mat(Craft.Kind.CARDBOARD, Color(0.55, 0.55, 0.56))
 	b.stairs(Vector3(-51, 0, -11.5), Vector3(-51, 3.0, -20), 3.0, step_m, rail_m)
 	b.stairs(Vector3(-22, 0, -11.5), Vector3(-22, 3.0, -20), 3.0, step_m, rail_m)
 
@@ -213,7 +219,7 @@ func _terminal() -> void:
 		Vector4(-33.4, -27.5, 1.1, 2.4), Vector4(-26.5, -24.5, 0, 2.4)])
 	for x: float in [-46.0, -34.0, -22.0]:
 		b.wall(Vector3(x, 0, -30), Vector3(x, 0, -24), 2.7, 0.3, inner)
-	var shop_cols := [Craft.PINK, Craft.ORANGE, Craft.TEAL]
+	var shop_cols := [Color(0.2, 0.28, 0.4), Color(0.5, 0.2, 0.18), Color(0.2, 0.34, 0.3)]
 	var shop_names := ["SNACKS", "BOOKS", "GIFTS"]
 	for i in 3:
 		var x0 := -58.0 + i * 12.0
@@ -228,15 +234,15 @@ func _terminal() -> void:
 
 	# Check-in counters with paper-lantern lighting above.
 	for x: float in [-50.0, -41.0, -31.0, -22.0]:
-		Props.counter(b, Vector3(x, 0, 3.5), 6.0, 0.0, Craft.CREAM, Craft.TEAL)
+		Props.counter(b, Vector3(x, 0, 3.5), 6.0, 0.0, Craft.WHITE, Color(0.4, 0.42, 0.45))
 		b.solid(Vector3(x, 0.35, 5.6), Vector3(6.0, 0.7, 1.0), Craft.mat(Craft.Kind.CARDBOARD, Color(0.35, 0.35, 0.4), Craft.Pattern.BANDS, Color(0.5, 0.5, 0.55), 6.0))
 	for pos in [Vector3(-44, 0, -8), Vector3(-32, 0, -8), Vector3(-44, 0, 12), Vector3(-32, 0, 12)]:
-		Props.pillar(b, pos, 8.0, Craft.TEAL)
+		Props.pillar(b, pos, 8.0, Craft.CONCRETE)
 	# Round information desk.
-	b.column(Vector3(-37.5, 0, -2), 1.6, 1.1, Craft.mat(Craft.Kind.CARDBOARD, Craft.ORANGE, Craft.Pattern.BANDS, Craft.YELLOW, 4.0, 1.0, false))
-	_label(Vector3(-37.5, 2.6, -2), "INFO", 96, Craft.ORANGE, true)
+	b.column(Vector3(-37.5, 0, -2), 1.6, 1.1, Craft.mat(Craft.Kind.CARDBOARD, Craft.BLUE, Craft.Pattern.BANDS, Craft.WHITE, 4.0, 1.0, false))
+	_label(Vector3(-37.5, 2.6, -2), "INFO", 96, Craft.YELLOW, true)
 	# Seating.
-	var seat_cols := [Craft.TEAL, Craft.PINK, Craft.PURPLE, Craft.ORANGE, Craft.TEAL]
+	var seat_cols := [Color(0.22, 0.24, 0.28), Craft.BLUE, Color(0.22, 0.24, 0.28), Craft.BLUE, Color(0.22, 0.24, 0.28)]
 	var si := 0
 	for x: float in [-52.0, -45.0, -38.0, -31.0, -24.0]:
 		Props.gate_seats(b, Vector3(x, 0, 15.1), 0.0, 6, seat_cols[si])
@@ -252,16 +258,16 @@ func _terminal() -> void:
 	board.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_label(Vector3(-57.5, 5.9, -4), "DEPARTURES", 80, Craft.YELLOW, false, PI * 0.5)
 	_label(Vector3(-57.5, 5.1, -4), "PC 101  ON TIME", 56, Craft.CREAM, false, PI * 0.5)
-	_label(Vector3(-57.5, 4.5, -4), "PC 207  DELAYED", 56, Craft.PINK, false, PI * 0.5)
+	_label(Vector3(-57.5, 4.5, -4), "PC 207  DELAYED", 56, Craft.ORANGE, false, PI * 0.5)
 	# Hanging paper lanterns light the hall.
-	var lantern := Craft.mat(Craft.Kind.GLOW, Color(1.0, 0.86, 0.6), 0, Color.WHITE, 1.0, 0.0, false)
+	var lantern := Craft.mat(Craft.Kind.GLOW, Color(1.0, 0.95, 0.86), 0, Color.WHITE, 1.0, 0.0, false)
 	for x: float in [-50.0, -38.0, -26.0]:
 		for z: float in [-14.0, 0.0, 14.0]:
 			Craft.part(deco, Craft.sphere(0.45, 12), lantern, Vector3(x, 6.4, z), Vector3.ZERO, Vector3(1, 1.3, 1), false)
 			Craft.part(deco, Craft.cylinder(0.01, 0.01, 1.6, 4), Craft.mat(Craft.Kind.PAPER, Craft.INK, 0, Color.WHITE, 1.0, 0.0, false), Vector3(x, 7.3, z))
 			var l := OmniLight3D.new()
 			l.position = Vector3(x, 6.0, z)
-			l.light_color = Color(1.0, 0.85, 0.65)
+			l.light_color = Color(1.0, 0.93, 0.82)
 			l.light_energy = 1.4
 			l.omni_range = 13.0
 			deco.add_child(l)
@@ -271,7 +277,7 @@ func _terminal() -> void:
 
 func _jet_bridge() -> void:
 	var shell := Craft.mat(Craft.Kind.CARDBOARD, Color(0.55, 0.58, 0.64), Craft.Pattern.BANDS, Color(0.6, 0.63, 0.7), 2.0)
-	var floor_m := Craft.mat(Craft.Kind.FELT, Color(0.35, 0.4, 0.55), Craft.Pattern.STITCH, Craft.CREAM)
+	var floor_m := Craft.mat(Craft.Kind.FELT, Color(0.3, 0.31, 0.34), Craft.Pattern.STITCH, Color(0.45, 0.47, 0.5))
 	b.span(Vector3(-14.25, 2.7, -10.5), Vector3(0.5, 3.0, -7.5), floor_m)
 	b.span(Vector3(-2.5, 2.7, -7.5), Vector3(0.5, 3.0, -5.0), floor_m)
 	b.wall(Vector3(-14.25, 3, -10.5), Vector3(0.5, 3, -10.5), 2.7, 0.2, shell, [Vector4(-12, -3, 0.9, 2.1)])
@@ -291,13 +297,13 @@ func _airliner() -> void:
 	var zc := -2.0
 	var yc := 4.4
 	var r := 3.2
-	var skin := Craft.mat(Craft.Kind.PAPER, Color(0.97, 0.95, 0.9), Craft.Pattern.WALL, Color(0.97, 0.95, 0.9), 1.4, 0.0, false)
-	var cabin := Craft.mat(Craft.Kind.PAPER, Color(0.98, 0.93, 0.83), 0, Color.WHITE, 1.0, 0.0, false)
-	var livery := Craft.mat(Craft.Kind.PAPER, Craft.TEAL, 0, Color.WHITE, 1.0, 0.0, false)
-	var livery2 := Craft.mat(Craft.Kind.PAPER, Craft.PINK, 0, Color.WHITE, 1.0, 0.0, false)
+	var skin := Craft.mat(Craft.Kind.PAPER, Color(0.88, 0.88, 0.86), Craft.Pattern.WALL, Color(0.8, 0.81, 0.82), 1.4, 0.0, false)
+	var cabin := Craft.mat(Craft.Kind.PAPER, Color(0.82, 0.8, 0.76), 0, Color.WHITE, 1.0, 0.0, false)
+	var livery := Craft.mat(Craft.Kind.PAPER, Craft.BLUE, 0, Color.WHITE, 1.0, 0.0, false)
+	var livery2 := Craft.mat(Craft.Kind.PAPER, Craft.TEAL, 0, Color.WHITE, 1.0, 0.0, false)
 
 	# Collision shell of the cabin.
-	var floor_m := Craft.mat(Craft.Kind.FELT, Color(0.28, 0.33, 0.55), Craft.Pattern.STITCH, Craft.YELLOW)
+	var floor_m := Craft.mat(Craft.Kind.FELT, Color(0.24, 0.27, 0.34), Craft.Pattern.STITCH, Color(0.45, 0.48, 0.55))
 	b.span(Vector3(-4.6, 2.7, -4.85), Vector3(36, 3.0, 0.85), floor_m)
 	b.wall(Vector3(-4.6, 3, -5.0), Vector3(36, 3, -5.0), 3.4, 0.3, null, [Vector4(-2.4, 0.4, 0, 2.4)])
 	b.wall(Vector3(-4.6, 3, 1.0), Vector3(36, 3, 1.0), 3.4, 0.3, null, [Vector4(31.5, 33.5, 0, 2.4)])
@@ -333,8 +339,8 @@ func _airliner() -> void:
 		while x < 31.0:
 			Craft.part(deco, Craft.cylinder(0.2, 0.2, 0.04, 12), win, Vector3(x, yc + 0.35, zc + side * (r + 0.005)), Vector3(PI * 0.5, 0, 0), Vector3(1, 1, 1.3), false)
 			x += 1.1
-	_label(Vector3(14, yc + 1.4, zc - r - 0.05), "PAPERCUT AIR", 220, Craft.TEAL, false, PI)
-	_label(Vector3(14, yc + 1.4, zc + r + 0.05), "PAPERCUT AIR", 220, Craft.TEAL)
+	_label(Vector3(14, yc + 1.4, zc - r - 0.05), "PAPERCUT AIR", 220, Craft.BLUE, false, PI)
+	_label(Vector3(14, yc + 1.4, zc + r + 0.05), "PAPERCUT AIR", 220, Craft.BLUE)
 
 	# Nose and cockpit.
 	Craft.part(deco, Craft.sphere(r, 28), skin, Vector3(-5.0, yc, zc), Vector3.ZERO, Vector3(1.55, 1.0, 1.0))
@@ -343,15 +349,15 @@ func _airliner() -> void:
 	# Tail cone, fin and stabilisers.
 	Craft.part(deco, Craft.cylinder(r, 0.7, 7.5, 28), skin, Vector3(40.7, yc + 0.6, zc), Vector3(0, 0, -PI * 0.5 + 0.1))
 	var fin_pts := PackedVector2Array([Vector2(0, 0), Vector2(6.5, 0), Vector2(8.2, 7.0), Vector2(5.4, 7.2)])
-	Craft.part(deco, Craft.cutout(fin_pts, 0.35), Craft.mat(Craft.Kind.CARDBOARD, Craft.TEAL, 0, Color.WHITE, 1.0, 0.0, false), Vector3(36.5, yc + 2.4, zc))
-	var star := Craft.part(deco, Craft.cutout(Craft.star_points(1.2, 0.5), 0.4), Craft.mat(Craft.Kind.FELT, Craft.YELLOW, 0, Color.WHITE, 1.0, 0.0, false), Vector3(42.3, yc + 6.0, zc))
+	Craft.part(deco, Craft.cutout(fin_pts, 0.35), Craft.mat(Craft.Kind.CARDBOARD, Craft.BLUE, 0, Color.WHITE, 1.0, 0.0, false), Vector3(36.5, yc + 2.4, zc))
+	var star := Craft.part(deco, Craft.cutout(Craft.star_points(1.2, 0.5), 0.4), Craft.mat(Craft.Kind.FELT, Craft.TEAL, 0, Color.WHITE, 1.0, 0.0, false), Vector3(42.3, yc + 6.0, zc))
 	star.scale = Vector3(1, 1, 1.1)
 	for side: float in [-1.0, 1.0]:
 		var stab := PackedVector2Array([Vector2(0, 0), Vector2(4.0, 0), Vector2(5.0, 5.5), Vector2(3.4, 5.6)])
 		Craft.part(deco, Craft.cutout(stab, 0.25), skin, Vector3(38.5, yc + 1.4, zc + side * 0.8), Vector3(side * PI * 0.5, 0, 0))
 
 	# Wings with engines (you can walk underneath).
-	var wing_m := Craft.mat(Craft.Kind.CARDBOARD, Color(0.9, 0.9, 0.92), Craft.Pattern.STITCH, Craft.TEAL)
+	var wing_m := Craft.mat(Craft.Kind.CARDBOARD, Color(0.76, 0.77, 0.78), Craft.Pattern.STITCH, Color(0.6, 0.62, 0.64))
 	for side: float in [-1.0, 1.0]:
 		var pts := PackedVector2Array([Vector2(11, 2.4), Vector2(21, 2.4), Vector2(26, 19), Vector2(22.5, 19.5)])
 		_slab_polygon(pts, side, zc, 2.65, 0.35, wing_m)
@@ -360,7 +366,7 @@ func _airliner() -> void:
 		var body := b.solid(Vector3(16.5, 1.7, ez), Vector3(5.0, 2.0, 2.0), null)
 		Craft.part(body, Craft.cylinder(1.0, 1.0, 5.0, 24), eng, Vector3.ZERO, Vector3(0, 0, PI * 0.5))
 		Craft.part(body, Craft.cylinder(0.75, 0.75, 0.1, 20), Craft.mat(Craft.Kind.PAPER, Color(0.12, 0.12, 0.14), 0, Color.WHITE, 1.0, 0.0, false), Vector3(-2.52, 0, 0), Vector3(0, 0, PI * 0.5))
-		Craft.part(body, Craft.cylinder(0.3, 0.3, 0.12, 10), Craft.mat(Craft.Kind.PLASTIC, Craft.RED, 0, Color.WHITE, 1.0, 0.0, false), Vector3(-2.56, 0, 0), Vector3(0, 0, PI * 0.5))
+		Craft.part(body, Craft.cylinder(0.3, 0.3, 0.12, 10), Craft.mat(Craft.Kind.FOIL, Color(0.7, 0.71, 0.73), 0, Color.WHITE, 1.0, 0.0, false), Vector3(-2.56, 0, 0), Vector3(0, 0, PI * 0.5))
 		Craft.box(deco, Vector3(17, 2.55, ez), Vector3(3.0, 0.5, 0.3), wing_m)
 	# Landing gear.
 	var tyre := Craft.mat(Craft.Kind.PLASTIC, Color(0.12, 0.12, 0.13), 0, Color.WHITE, 1.0, 0.0, false)
@@ -431,15 +437,22 @@ func _slab_polygon(pts: PackedVector2Array, side: float, zc: float, y: float, th
 
 # ----------------------------------------------------------- baggage hall
 
+## A thin sheet of roofing felt laid over a roof span (visual only).
+func _roof_sheet(a: Vector3, c: Vector3, material: Material) -> void:
+	var sheet := Craft.box(deco, Vector3((a.x + c.x) * 0.5, a.y + 0.012, (a.z + c.z) * 0.5), Vector3(absf(c.x - a.x) - 0.06, 0.02, absf(c.z - a.z) - 0.06), material)
+	sheet.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+
+
 func _baggage_hall() -> void:
-	var wall_m := Craft.mat(Craft.Kind.CARDBOARD, Craft.PURPLE, Craft.Pattern.WALL, Craft.YELLOW, 1.0)
-	var inner_m := Craft.mat(Craft.Kind.CARDBOARD, Color(0.82, 0.74, 0.95))
+	var wall_m := Craft.mat(Craft.Kind.CARDBOARD, Craft.SLATE, Craft.Pattern.WALL, Craft.CONCRETE_DARK, 1.0)
+	var inner_m := Craft.mat(Craft.Kind.CARDBOARD, Color(0.66, 0.68, 0.7))
 	b.wall(Vector3(-14, 0, -38), Vector3(32, 0, -38), 5.0, 0.4, wall_m)
 	b.wall(Vector3(-14, 0, -26), Vector3(32, 0, -26), 5.0, 0.4, wall_m, [
 		Vector4(-6, -2, 0, 3.2), Vector4(8, 12, 0, 3.2), Vector4(22, 26, 0, 3.2), Vector4(1, 6, 1.2, 2.6), Vector4(15, 20, 1.2, 2.6)])
 	b.wall(Vector3(-14, 0, -38), Vector3(-14, 0, -30), 5.0, 0.4, wall_m)
 	b.wall(Vector3(32, 0, -38), Vector3(32, 0, -26), 5.0, 0.4, wall_m, [Vector4(-34.5, -28.5, 0, 3.6)])
 	b.span(Vector3(-14.2, 5.0, -38.2), Vector3(32.2, 5.3, -25.8), Craft.mat(Craft.Kind.CARDBOARD, Craft.KRAFT))
+	_roof_sheet(Vector3(-14.2, 5.3, -38.2), Vector3(32.2, 5.3, -25.8), Craft.mat(Craft.Kind.FELT, Color(0.34, 0.35, 0.37), Craft.Pattern.STITCH, Color(0.42, 0.43, 0.45), 2.0))
 	b.blocker(Vector3(9, 6.5, -32), Vector3(48, 2, 14))
 	# Rolled-up corrugated doors above each opening.
 	var roll := Craft.mat(Craft.Kind.CARDBOARD, Color(0.75, 0.75, 0.8), 0, Color.WHITE, 1.0, 0.0, false)
@@ -465,11 +478,11 @@ func _baggage_hall() -> void:
 		Props.crate(b, p, 1.1, rng.randf() * 0.3)
 	Props.crate(b, Vector3(5.1, 1.1, -36.6), 0.9, 0.2)
 	for x: float in [-1.0, 13.0]:
-		Props.pillar(b, Vector3(x, 0, -29.6), 5.0, Color(0.82, 0.74, 0.95))
+		Props.pillar(b, Vector3(x, 0, -29.6), 5.0, Color(0.6, 0.62, 0.64))
 	for x: float in [-6.0, 7.0, 20.0]:
 		var l := OmniLight3D.new()
 		l.position = Vector3(x, 4.4, -32)
-		l.light_color = Color(0.95, 0.85, 1.0)
+		l.light_color = Color(0.95, 0.96, 0.95)
 		l.light_energy = 1.3
 		l.omni_range = 11.0
 		deco.add_child(l)
@@ -481,15 +494,15 @@ func _baggage_hall() -> void:
 # ----------------------------------------------------------------- tarmac
 
 func _tarmac() -> void:
-	Props.container(b, Vector3(5, 0, -18.5), 0.1, Craft.TEAL)
-	Props.container(b, Vector3(7.3, 0, -18.3), -0.05, Craft.PINK)
-	Props.container(b, Vector3(6.2, 0, -15.8), 0.2, Craft.YELLOW)
-	Props.container(b, Vector3(40, 0, -18), 0.0, Craft.ORANGE)
-	Props.container(b, Vector3(42.3, 0, -18.2), 0.08, Craft.TEAL)
-	Props.container(b, Vector3(43, 0, -14.8), -0.3, Craft.PURPLE)
-	Props.container(b, Vector3(46, 0, 7), 0.15, Craft.PINK)
-	Props.container(b, Vector3(48.4, 0, 7.4), 0.0, Craft.YELLOW)
-	Props.container(b, Vector3(22, 0, 9), 0.4, Craft.ORANGE)
+	Props.container(b, Vector3(5, 0, -18.5), 0.1, Color(0.3, 0.4, 0.42))
+	Props.container(b, Vector3(7.3, 0, -18.3), -0.05, Craft.ALUMINIUM)
+	Props.container(b, Vector3(6.2, 0, -15.8), 0.2, Craft.ALUMINIUM)
+	Props.container(b, Vector3(40, 0, -18), 0.0, Color(0.56, 0.3, 0.2))
+	Props.container(b, Vector3(42.3, 0, -18.2), 0.08, Craft.ALUMINIUM)
+	Props.container(b, Vector3(43, 0, -14.8), -0.3, Craft.BLUE)
+	Props.container(b, Vector3(46, 0, 7), 0.15, Craft.ALUMINIUM)
+	Props.container(b, Vector3(48.4, 0, 7.4), 0.0, Color(0.3, 0.4, 0.42))
+	Props.container(b, Vector3(22, 0, 9), 0.4, Craft.ALUMINIUM)
 	Props.baggage_cart(b, Vector3(2, 0, 9.5), 0.2, rng)
 	Props.baggage_cart(b, Vector3(5.2, 0, 10.4), 0.25, rng)
 	Props.baggage_cart(b, Vector3(25, 0, -14), 1.4, rng)
@@ -503,10 +516,10 @@ func _tarmac() -> void:
 	Props.barrier(b, Vector3(-8, 0, -21.5), 0.3, 3.0)
 	var c1 := Props.crate(b, Vector3(55, 0, -7), 1.4, 0.1)
 	Props.crate(b, Vector3(55.2, 1.4, -7), 1.0, 0.4)
-	Props.crate(b, Vector3(54.2, 0, 2.5), 1.2, -0.2, Craft.YELLOW)
-	Props.crate(b, Vector3(36, 0, 18), 1.3, 0.3, Craft.TEAL)
+	Props.crate(b, Vector3(54.2, 0, 2.5), 1.2, -0.2, Craft.KRAFT)
+	Props.crate(b, Vector3(36, 0, 18), 1.3, 0.3, Craft.OLIVE)
 	Props.crate(b, Vector3(14, 0, -9.5), 1.2, 0.2)
-	Props.crate(b, Vector3(-9, 0, -16), 1.2, -0.3, Craft.PINK)
+	Props.crate(b, Vector3(-9, 0, -16), 1.2, -0.3, Craft.KRAFT_DARK)
 	for p in [Vector3(0, 0, -12), Vector3(1.5, 0, -12.5), Vector3(28, 0, -9), Vector3(38, 0, 4), Vector3(9, 0, 15), Vector3(50, 0, -2)]:
 		Props.cone(b, p)
 	for p: Vector3 in [Vector3(0, 0, -24), Vector3(56, 0, -34), Vector3(56, 0, 23), Vector3(14, 0, 23)]:
@@ -518,23 +531,23 @@ func _tarmac() -> void:
 
 func _apron() -> void:
 	# A little cardboard business jet out on the apron: long sightlines.
-	var skin := Craft.mat(Craft.Kind.PAPER, Craft.CREAM, 0, Color.WHITE, 1.0, 0.0, false)
+	var skin := Craft.mat(Craft.Kind.PAPER, Craft.WHITE, 0, Color.WHITE, 1.0, 0.0, false)
 	var y := 1.7
 	var jet := b.solid(Vector3(18, y, 20.5), Vector3(10, 2.2, 2.2), null)
 	Craft.part(jet, Craft.tube(1.15, 9.0, 24), skin, Vector3.ZERO)
 	Craft.part(jet, Craft.sphere(1.15, 20), skin, Vector3(-4.5, 0, 0), Vector3.ZERO, Vector3(1.6, 1, 1))
 	Craft.part(jet, Craft.cylinder(1.15, 0.3, 3.0, 20), skin, Vector3(6.0, 0.3, 0), Vector3(0, 0, -PI * 0.5 + 0.12))
-	Craft.box(jet, Vector3(0.5, -0.6, 0), Vector3(2.6, 0.2, 9.0), Craft.mat(Craft.Kind.CARDBOARD, Craft.PINK))
+	Craft.box(jet, Vector3(0.5, -0.6, 0), Vector3(2.6, 0.2, 9.0), Craft.mat(Craft.Kind.CARDBOARD, Color(0.78, 0.78, 0.78)))
 	Craft.box(jet, Vector3(-5.1, 0.35, 0), Vector3(0.6, 0.4, 1.6), Craft.mat(Craft.Kind.PAPER, Color(0.2, 0.25, 0.35)), Vector3(0, 0, -0.5))
 	var fin := Craft.cutout(PackedVector2Array([Vector2(0, 0), Vector2(2.2, 0), Vector2(3.0, 2.6), Vector2(2.0, 2.7)]), 0.15)
-	Craft.part(jet, fin, Craft.mat(Craft.Kind.CARDBOARD, Craft.PINK, 0, Color.WHITE, 1.0, 0.0, false), Vector3(4.6, 0.9, 0))
+	Craft.part(jet, fin, Craft.mat(Craft.Kind.CARDBOARD, Color(0.42, 0.14, 0.16), 0, Color.WHITE, 1.0, 0.0, false), Vector3(4.6, 0.9, 0))
 	for x: float in [14.0, 21.0]:
 		b.column(Vector3(x, 0, 20.5), 0.12, 0.6, Craft.mat(Craft.Kind.FOIL, Color(0.7, 0.7, 0.72), 0, Color.WHITE, 1.0, 0.0, false))
 	Props.luggage(b, Vector3(10, 0, 21), rng)
 	Props.luggage(b, Vector3(10.6, 0, 21.4), rng)
-	Props.crate(b, Vector3(-4, 0, 21), 1.3, 0.2, Craft.ORANGE)
+	Props.crate(b, Vector3(-4, 0, 21), 1.3, 0.2, Color(0.56, 0.46, 0.32))
 	Props.crate(b, Vector3(42, 0, 22), 1.4, -0.1)
-	Props.container(b, Vector3(2, 0, 22.5), 0.0, Craft.TEAL)
+	Props.container(b, Vector3(2, 0, 22.5), 0.0, Craft.ALUMINIUM)
 	# Sidewalk outside the terminal.
 	Props.planter(b, Vector3(-50, 0, 24.2), rng)
 	Props.planter(b, Vector3(-28, 0, 24.2), rng)
@@ -584,9 +597,9 @@ func _backdrop() -> void:
 	Craft.box(far, Vector3(0, 0.01, 50), Vector3(260, 0.04, 22), Craft.mat(Craft.Kind.FELT, Color(0.3, 0.31, 0.34), 0, Color.WHITE, 1.0, 0.0))
 	for i in 20:
 		Craft.box(far, Vector3(-120 + i * 13.0, 0.03, 50), Vector3(6, 0.02, 0.8), Craft.mat(Craft.Kind.PAPER, Craft.WHITE))
-	Craft.box(far, Vector3(0, -0.1, 0), Vector3(800, 0.1, 800), Craft.mat(Craft.Kind.FELT, Color(0.42, 0.7, 0.36), 0, Color.WHITE, 1.0, 0.0, false), Vector3.ZERO, false)
-	# Cardboard city flats.
-	var cols := [Craft.TEAL, Craft.PURPLE, Craft.ORANGE, Craft.PINK, Craft.YELLOW, Color(0.3, 0.5, 0.75), Color(0.5, 0.75, 0.55)]
+	Craft.box(far, Vector3(0, -0.1, 0), Vector3(800, 0.1, 800), Craft.mat(Craft.Kind.FELT, Color(0.34, 0.41, 0.25), 0, Color.WHITE, 1.0, 0.0, false), Vector3.ZERO, false)
+	# Cardboard city flats, painted like real concrete, brick and glass towers.
+	var cols := [Color(0.62, 0.6, 0.56), Color(0.5, 0.52, 0.54), Color(0.7, 0.66, 0.58), Color(0.38, 0.44, 0.5), Color(0.56, 0.47, 0.4), Color(0.44, 0.5, 0.56), Color(0.66, 0.66, 0.64)]
 	for i in 40:
 		var a := TAU * i / 40.0 + rng.randf_range(-0.05, 0.05)
 		var d := rng.randf_range(115.0, 165.0)
@@ -594,28 +607,28 @@ func _backdrop() -> void:
 		var w := rng.randf_range(10.0, 22.0)
 		var col: Color = cols[rng.randi() % cols.size()]
 		var p := Vector3(cos(a) * d, h * 0.5, sin(a) * d)
-		var m := Craft.mat(Craft.Kind.CARDBOARD, col, Craft.Pattern.WINDOWS, Color(0.98, 0.92, 0.7), 0.35)
+		var m := Craft.mat(Craft.Kind.CARDBOARD, col, Craft.Pattern.WINDOWS, Color(0.3, 0.36, 0.42), 0.35)
 		var flat := Craft.box(far, p, Vector3(w, h, 1.5), m, Vector3(0, -a + PI * 0.5, 0))
 		flat.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	# Control tower.
-	var tower := Craft.mat(Craft.Kind.CARDBOARD, Craft.CREAM, Craft.Pattern.BANDS, Craft.TEAL, 0.2, 1.0, false)
+	var tower := Craft.mat(Craft.Kind.CARDBOARD, Craft.CONCRETE, Craft.Pattern.BANDS, Craft.CONCRETE_DARK, 0.2, 1.0, false)
 	Craft.part(far, Craft.cylinder(2.2, 3.0, 34, 20), tower, Vector3(84, 17, -62))
-	Craft.part(far, Craft.cylinder(5.0, 3.6, 4.5, 20), Craft.mat(Craft.Kind.PAPER, Color(0.3, 0.5, 0.65), 0, Color.WHITE, 1.0, 0.0, false), Vector3(84, 36, -62))
-	Craft.part(far, Craft.cylinder(5.4, 5.4, 0.8, 20), Craft.mat(Craft.Kind.CARDBOARD, Craft.RED, 0, Color.WHITE, 1.0, 0.0, false), Vector3(84, 38.6, -62))
+	Craft.part(far, Craft.cylinder(5.0, 3.6, 4.5, 20), Craft.mat(Craft.Kind.PAPER, Color(0.24, 0.3, 0.36), 0, Color.WHITE, 1.0, 0.0, false), Vector3(84, 36, -62))
+	Craft.part(far, Craft.cylinder(5.4, 5.4, 0.8, 20), Craft.mat(Craft.Kind.CARDBOARD, Craft.CONCRETE_DARK, 0, Color.WHITE, 1.0, 0.0, false), Vector3(84, 38.6, -62))
 	# Felt hills and paper trees.
 	for i in 16:
 		var a := TAU * i / 16.0 + 0.2
 		var d := rng.randf_range(190.0, 260.0)
-		var hill := Craft.part(far, Craft.sphere(1.0, 24), Craft.mat(Craft.Kind.KNIT, [Color(0.36, 0.66, 0.34), Color(0.3, 0.58, 0.4), Color(0.45, 0.72, 0.36)][i % 3], 0, Color.WHITE, 0.05, 0.0, false), Vector3(cos(a) * d, -4, sin(a) * d))
+		var hill := Craft.part(far, Craft.sphere(1.0, 24), Craft.mat(Craft.Kind.KNIT, [Color(0.34, 0.41, 0.26), Color(0.3, 0.37, 0.27), Color(0.4, 0.44, 0.3)][i % 3], 0, Color.WHITE, 0.05, 0.0, false), Vector3(cos(a) * d, -4, sin(a) * d))
 		hill.scale = Vector3(rng.randf_range(40, 70), rng.randf_range(22, 40), rng.randf_range(30, 50))
 		hill.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	for i in 26:
 		var a := rng.randf() * TAU
 		var d := rng.randf_range(78.0, 105.0)
 		Props.paper_tree(far, Vector3(cos(a) * d, 0, sin(a) * d), rng.randf_range(1.6, 2.6), rng)
-	# Paper clouds hanging on strings, and a felt sun.
-	var cloud_m := Craft.mat(Craft.Kind.FELT, Color(0.99, 0.98, 0.96), Craft.Pattern.STITCH, Color(0.75, 0.85, 0.95), 4.0, 0.0, false)
-	var string_m := Craft.mat(Craft.Kind.PAPER, Color(0.9, 0.9, 0.92), 0, Color.WHITE, 1.0, 0.0, false)
+	# Teased cotton-wadding clouds on near-invisible fishing line.
+	var cloud_m := Craft.mat(Craft.Kind.FELT, Color(0.93, 0.93, 0.92), 0, Color.WHITE, 4.0, 0.0, false)
+	var string_m := Craft.mat(Craft.Kind.PLASTIC, Color(0.62, 0.7, 0.78), 0, Color.WHITE, 1.0, 0.0, false)
 	for i in 14:
 		var a := rng.randf() * TAU
 		var d := rng.randf_range(110.0, 220.0)
@@ -624,11 +637,7 @@ func _backdrop() -> void:
 		var p := Vector3(cos(a) * d, y, sin(a) * d)
 		var cl := Craft.part(far, Craft.cutout(Craft.cloud_points(w, w * 0.45, 5, i + 3), 2.0), cloud_m, p, Vector3(0, -a + PI * 0.5, 0))
 		cl.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		Craft.part(far, Craft.cylinder(0.08, 0.08, 120, 4), string_m, p + Vector3(0, w * 0.2 + 60, 0), Vector3.ZERO, Vector3.ONE, false)
-	var sun_dir := sun.global_transform.basis.z
-	var sun_pos := sun_dir * 420.0
-	var sun_disc := Craft.part(far, Craft.cutout(Craft.star_points(26, 20, 14), 2.0), Craft.mat(Craft.Kind.GLOW, Color(1.0, 0.85, 0.4), 0, Color.WHITE, 1.0, 0.0, false), sun_pos, Vector3.ZERO, Vector3.ONE, false)
-	sun_disc.look_at_from_position(sun_pos, Vector3.ZERO, Vector3.UP)
+		Craft.part(far, Craft.cylinder(0.025, 0.025, 120, 4), string_m, p + Vector3(0, w * 0.2 + 60, 0), Vector3.ZERO, Vector3.ONE, false)
 
 
 # --------------------------------------------------------------- dressing
@@ -637,24 +646,13 @@ func _dressing() -> void:
 	var d := Node3D.new()
 	d.name = "Dressing"
 	deco.add_child(d)
-	# Bunting strung across the tarmac, the hall and the baggage area.
-	Dressing.bunting(d, Vector3(-14, 7.6, 18), Vector3(14, 8.7, 23), 1.2, rng)
-	Dressing.bunting(d, Vector3(14, 8.7, 23), Vector3(56, 8.7, 23), 1.8, rng)
-	Dressing.bunting(d, Vector3(0, 8.7, -24), Vector3(56, 8.7, -34), 1.8, rng)
-	Dressing.bunting(d, Vector3(56, 8.7, -34), Vector3(56, 8.7, 23), 2.2, rng)
-	Dressing.bunting(d, Vector3(-57.5, 7.3, -12), Vector3(-14.5, 7.3, -12), 1.0, rng)
-	Dressing.bunting(d, Vector3(-57.5, 7.3, 9), Vector3(-14.5, 7.3, 9), 1.0, rng)
-	Dressing.bunting(d, Vector3(-13.6, 4.6, -31), Vector3(31.6, 4.6, -31), 0.6, rng)
-	# Warm string lights along the mezzanine and the terminal front.
-	Dressing.string_lights(d, Vector3(-57.5, 4.6, -20.1), Vector3(-17.4, 4.6, -20.1), 0.35)
-	Dressing.string_lights(d, Vector3(-57.8, 3.6, 22.4), Vector3(-14.2, 3.6, 22.4), 0.5, false)
-	Dressing.string_lights(d, Vector3(-13.6, 3.6, -25.6), Vector3(31.6, 3.6, -25.6), 0.4, false)
-	# Hanging felt signs.
-	Dressing.hanging_sign(d, Vector3(-16.0, 6.4, -9.0), -PI * 0.5, "GATE 7", Craft.ORANGE, 2.6)
-	Dressing.hanging_sign(d, Vector3(-36.0, 5.6, 3.5), 0.0, "CHECK-IN", Craft.TEAL, 4.0)
-	Dressing.hanging_sign(d, Vector3(-50.0, 5.4, 12.0), PI * 0.5, "DEPARTURES", Craft.PINK, 4.4)
-	# Taped-up posters.
-	var titles := ["FLY PAPERCUT", "FOLD SAFELY", "GATE 7", "VISIT ORIGAMI CITY", "LOST LUGGAGE", "NO CUTTING", "CRAFT AIR", "GLUE ZONE"]
+	# Hanging wayfinding signs: real airport convention, dark panels with
+	# yellow or white lettering.
+	Dressing.hanging_sign(d, Vector3(-16.0, 6.4, -9.0), -PI * 0.5, "GATE 7", Color(0.2, 0.22, 0.25), 2.6)
+	Dressing.hanging_sign(d, Vector3(-36.0, 5.6, 3.5), 0.0, "CHECK-IN", Color(0.2, 0.22, 0.25), 4.0)
+	Dressing.hanging_sign(d, Vector3(-50.0, 5.4, 12.0), PI * 0.5, "DEPARTURES", Color(0.2, 0.22, 0.25), 4.4)
+	# Printed notices and adverts, the kind any real terminal has.
+	var titles := ["FLY PAPERCUT AIR", "NO SMOKING", "PASSPORT CONTROL", "VISIT THE COAST", "LOST PROPERTY", "SECURITY NOTICE", "DUTY FREE", "BAGGAGE CLAIM"]
 	var t := 0
 	for z: float in [-15.0, 5.0, 16.0]:
 		Dressing.poster(d, Vector3(-57.72, 1.9, z), PI * 0.5, Vector2(1.1, 1.5), rng, titles[t % titles.size()])
@@ -677,14 +675,14 @@ func _revamp() -> void:
 	var r := Node3D.new()
 	r.name = "Revamp"
 	deco.add_child(r)
-	var frame_c := Color(0.95, 0.95, 0.92)
+	var frame_c := Color(0.82, 0.83, 0.84)
 	# Window mullions everywhere there's glass.
 	for w in [[Vector3(-14, 1, -24), Vector3(-14, 2.6, -12)], [Vector3(-14, 1, -1), Vector3(-14, 2.6, 9)], [Vector3(-14, 1, 15), Vector3(-14, 2.6, 21)],
 			[Vector3(-14, 4.5, -1), Vector3(-14, 7.2, 20)], [Vector3(-55, 1, 22), Vector3(-44, 2.6, 22)], [Vector3(-32, 1, 22), Vector3(-18, 2.6, 22)],
 			[Vector3(-54, 4.5, 22), Vector3(-18, 7.0, 22)]]:
 		Architecture.window_frame(r, w[0], w[1], 1.6, frame_c)
 	for w in [[Vector3(1, 1.2, -26), Vector3(6, 2.6, -26)], [Vector3(15, 1.2, -26), Vector3(20, 2.6, -26)]]:
-		Architecture.window_frame(r, w[0], w[1], 1.25, Craft.YELLOW, false)
+		Architecture.window_frame(r, w[0], w[1], 1.25, Color(0.5, 0.52, 0.55), false)
 	for w in [[Vector3(-12, 3.9, -10.5), Vector3(-3, 5.1, -10.5)], [Vector3(-12, 3.9, -7.5), Vector3(-4, 5.1, -7.5)]]:
 		Architecture.window_frame(r, w[0], w[1], 1.0, Color(0.7, 0.72, 0.78), false)
 	# Ceiling structure: long beams and cross beams under the roof.
@@ -710,20 +708,20 @@ func _revamp() -> void:
 	for z: float in [-10.5, -9.3, 13.6]:
 		Props.vending(b, Vector3(-57.1, 0, z), -PI * 0.5, [Craft.RED, Craft.BLUE, Craft.PURPLE][int(absf(z)) % 3], rng)
 	for p: Vector3 in [Vector3(-43, 0, -9.2), Vector3(-31, 0, 13.2), Vector3(-20.6, 0, -6.5), Vector3(-55, 0, 1.0), Vector3(-17, 0, 6.5)]:
-		Props.trash_bin(b, p, Craft.GRASS)
+		Props.trash_bin(b, p, Color(0.3, 0.32, 0.34))
 	for p: Vector3 in [Vector3(-38, 0, 8.5), Vector3(-26, 0, -8.5), Vector3(-49.5, 0, -7.5)]:
 		Props.potted_tree(b, p, rng)
-	Props.rug(r, Vector3(-36, 0, -6.5), Vector2(40, 2.6), Craft.PURPLE)
-	Props.rug(r, Vector3(-38, 0, 15.9), Vector2(33, 5.6), Craft.TEAL)
-	Props.rug(r, Vector3(-36, 0, 1.0 - 0.3), Vector2(36, 2.6), Craft.RED)
+	Props.rug(r, Vector3(-36, 0, -6.5), Vector2(40, 2.6), Color(0.3, 0.33, 0.4))
+	Props.rug(r, Vector3(-38, 0, 15.9), Vector2(33, 5.6), Color(0.28, 0.33, 0.37))
+	Props.rug(r, Vector3(-36, 0, 1.0 - 0.3), Vector2(36, 2.6), Color(0.33, 0.21, 0.21))
 	# Terminal exterior: parapet, rooftop plant, big cardboard lettering.
-	Architecture.parapet(r, Vector3(-58.2, 8.4, -30.2), Vector3(-13.8, 8.4, 22.2), 0.7, Craft.CREAM, Craft.TEAL)
+	Architecture.parapet(r, Vector3(-58.2, 8.4, -30.2), Vector3(-13.8, 8.4, 22.2), 0.7, Craft.CONCRETE, Craft.CONCRETE_DARK)
 	Architecture.rooftop(r, Vector3(-36, 8.4, -4), rng, 6, Vector2(16, 18))
-	Architecture.letters(r, "GATEWAY", Vector3(-13.6, 9.3, -4.0), PI * 0.5, 3.4, Craft.YELLOW)
+	Architecture.letters(r, "GATEWAY", Vector3(-13.6, 9.3, -4.0), PI * 0.5, 3.4, Craft.WHITE)
 	Architecture.letters(r, "TERMINAL 1", Vector3(-38, 3.55, 22.35), 0.0, 0.85, Craft.CREAM, 0.12)
-	Props.awning(r, Vector3(-38, 3.3, 22.3), 0.0, 6.0, Craft.ORANGE)
+	Props.awning(r, Vector3(-38, 3.3, 22.3), 0.0, 6.0, Color(0.3, 0.33, 0.38))
 	# Baggage hall roof.
-	Architecture.parapet(r, Vector3(-14.2, 5.3, -38.2), Vector3(32.2, 5.3, -25.8), 0.5, Craft.PURPLE, Craft.YELLOW)
+	Architecture.parapet(r, Vector3(-14.2, 5.3, -38.2), Vector3(32.2, 5.3, -25.8), 0.5, Craft.SLATE, Craft.CONCRETE_DARK)
 	Architecture.rooftop(r, Vector3(9, 5.3, -32), rng, 4, Vector2(18, 3))
 	# Tarmac: stand markings and ground support equipment.
 	var stand := Architecture.letters(r, "07", Vector3(-8.5, 0.045, 6.0), 0.0, 2.6, Craft.WHITE, 0.02)
@@ -758,9 +756,9 @@ func _revamp() -> void:
 	Craft.part(hangar, Craft.tube(19.6, 46.0, 36, true, PI), Craft.mat(Craft.Kind.CARDBOARD, Color(0.35, 0.38, 0.42), 0, Color.WHITE, 1.0, 0.0, false), Vector3.ZERO, Vector3(PI * 0.5, 0, 0))
 	Craft.box(hangar, Vector3(23, 10, 0), Vector3(0.5, 20, 40), Craft.mat(Craft.Kind.CARDBOARD, Color(0.35, 0.38, 0.42)))
 	Architecture.letters(hangar, "HANGAR 3", Vector3(-23.2, 16.5, 0), -PI * 0.5, 3.0, Craft.CREAM, 0.3)
-	_simple_plane(hangar, Vector3(0, 0, 0), 0.0, Craft.PINK)
-	_simple_plane(r, Vector3(95, 0, -70), 0.7, Craft.PURPLE)
-	_simple_plane(r, Vector3(-30, 0, -78), -0.4, Craft.ORANGE)
+	_simple_plane(hangar, Vector3(0, 0, 0), 0.0, Craft.BLUE)
+	_simple_plane(r, Vector3(95, 0, -70), 0.7, Craft.TEAL)
+	_simple_plane(r, Vector3(-30, 0, -78), -0.4, Color(0.5, 0.16, 0.16))
 	for i in 30:
 		for side: float in [39.0, 61.0]:
 			Craft.part(r, Craft.sphere(0.25, 6), Craft.mat(Craft.Kind.GLOW, Color(1.0, 0.9, 0.55), 0, Color.WHITE, 1.0, 0.0, false), Vector3(-130 + i * 9.0, 0.25, side), Vector3.ZERO, Vector3.ONE, false)
@@ -768,7 +766,7 @@ func _revamp() -> void:
 
 func _simple_plane(parent: Node3D, pos: Vector3, yaw: float, livery: Color) -> void:
 	var root := Craft.pivot(parent, pos, Vector3(0, yaw, 0))
-	var skin := Craft.mat(Craft.Kind.PAPER, Color(0.96, 0.95, 0.9), 0, Color.WHITE, 1.0, 0.0, false)
+	var skin := Craft.mat(Craft.Kind.PAPER, Color(0.88, 0.88, 0.86), 0, Color.WHITE, 1.0, 0.0, false)
 	Craft.part(root, Craft.tube(2.6, 30.0, 24), skin, Vector3(0, 3.6, 0))
 	Craft.part(root, Craft.sphere(2.6, 20), skin, Vector3(-15, 3.6, 0), Vector3.ZERO, Vector3(1.5, 1, 1))
 	Craft.part(root, Craft.cylinder(2.6, 0.5, 6.0, 20), skin, Vector3(18, 4.1, 0), Vector3(0, 0, -PI * 0.5 + 0.1))

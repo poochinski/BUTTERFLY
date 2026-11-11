@@ -56,11 +56,11 @@ static func string_lights(parent: Node3D, a: Vector3, b: Vector3, sag: float, wa
 ## A printed paper poster taped to a wall. yaw: direction the poster faces.
 static func poster(parent: Node3D, pos: Vector3, yaw: float, size: Vector2, rng: RandomNumberGenerator, title := "") -> void:
 	var root := Craft.pivot(parent, pos, Vector3(0, yaw, rng.randf_range(-0.05, 0.05)))
-	var bgs := [Craft.CREAM, Craft.YELLOW, Craft.TEAL, Craft.PINK, Color(0.3, 0.32, 0.5)]
+	var bgs := [Craft.CREAM, Craft.WHITE, Craft.BLUE, Color(0.24, 0.26, 0.3), Color(0.62, 0.66, 0.68)]
 	var bg: Color = bgs[rng.randi() % bgs.size()]
 	Craft.box(root, Vector3.ZERO, Vector3(size.x, size.y, 0.006), Craft.mat(Craft.Kind.PAPER, bg), Vector3.ZERO, false)
 	var ink: Color = Craft.INK if bg.get_luminance() > 0.5 else Craft.CREAM
-	var accent: Color = [Craft.RED, Craft.ORANGE, Craft.BLUE, Craft.GRASS][rng.randi() % 4]
+	var accent: Color = [Craft.RED, Craft.YELLOW, Craft.BLUE, Craft.TEAL][rng.randi() % 4]
 	# Simple printed artwork: a big shape and a couple of text bars.
 	var shape := rng.randi() % 3
 	var art_m := _paper(accent)
@@ -85,16 +85,16 @@ static func poster(parent: Node3D, pos: Vector3, yaw: float, size: Vector2, rng:
 		l.outline_size = 0
 		l.position = Vector3(0, -size.y * 0.3, 0.009)
 		root.add_child(l)
-	var tape := Craft.mat(Craft.Kind.TAPE, Color(0.94, 0.88, 0.7), 0, Color.WHITE, 1.0, 0.0, false)
+	var tape := Craft.mat(Craft.Kind.TAPE, Color(0.86, 0.8, 0.64), 0, Color.WHITE, 1.0, 0.0, false)
 	for c in [Vector2(-1, 1), Vector2(1, 1), Vector2(-1, -1), Vector2(1, -1)]:
 		Craft.box(root, Vector3(c.x * size.x * 0.47, c.y * size.y * 0.47, 0.008), Vector3(size.x * 0.22, size.y * 0.07, 0.003), tape, Vector3(0, 0, c.x * c.y * 0.7), false)
 
 
 ## Cut-out paper grass, Paper Mario style: crossed jagged cards.
 static func grass(parent: Node3D, pos: Vector3, scale: float, rng: RandomNumberGenerator, tall := false) -> void:
-	var cols := [Color(0.36, 0.72, 0.26), Color(0.48, 0.8, 0.3), Color(0.28, 0.6, 0.24)]
+	var cols := [Color(0.3, 0.42, 0.2), Color(0.38, 0.47, 0.24), Color(0.26, 0.36, 0.19)]
 	if tall:
-		cols = [Color(0.95, 0.8, 0.3), Color(0.9, 0.72, 0.25)]
+		cols = [Color(0.66, 0.6, 0.38), Color(0.58, 0.52, 0.34)]
 	var pts := PackedVector2Array()
 	var blades := 5
 	var w := 0.5 * scale
@@ -114,7 +114,7 @@ static func grass(parent: Node3D, pos: Vector3, scale: float, rng: RandomNumberG
 
 
 static func flower(parent: Node3D, pos: Vector3, rng: RandomNumberGenerator) -> void:
-	var cols := [Craft.PINK, Craft.YELLOW, Color(0.98, 0.98, 0.95), Craft.ORANGE, Color(0.7, 0.55, 0.95)]
+	var cols := [Color(0.86, 0.85, 0.8), Color(0.84, 0.74, 0.36), Color(0.62, 0.56, 0.7), Color(0.86, 0.85, 0.8), Color(0.84, 0.74, 0.36)]
 	var stem := _paper(Craft.GRASS)
 	Craft.box(parent, pos + Vector3(0, 0.2, 0), Vector3(0.02, 0.4, 0.004), stem, Vector3(0, rng.randf() * PI, 0), false)
 	var petals := Craft.cutout(Craft.star_points(0.13, 0.07, 5), 0.01)

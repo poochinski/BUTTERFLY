@@ -19,8 +19,8 @@ The first launch compiles shaders and can take a few seconds.
 
 ## Mode: Team Deathmatch, 6 v 6 against bots
 
-**Task Force Cardstock** (blue felt and helmets, your team) against the
-**Corrugated Militia** (red knit beanies). The first team to 75 kills wins,
+**Task Force Cardstock** (navy felt and olive helmets, your team) against
+the **Corrugated Militia** (rust felt and knit beanies). The first team to 75 kills wins,
 or the higher score after 10 minutes. You choose the bots' skill
 (Recruit, Regular, Hardened, Veteran) and your loadout in the menu.
 
@@ -111,6 +111,14 @@ pinned with brads and hot-glued. See `docs/ENVIRONMENT_PASS.md`.
 
 ## Art direction
 
+**Every map is a real place, rebuilt as faithfully as possible by skilled
+hobbyists using only what they could buy at an art, fabric and craft store.**
+The realism comes from the colours, proportions and logic of the real place.
+The charm comes from the materials: felt, card, construction paper, yarn,
+tape, foil and cellophane. The full brief, with the palette, materials guide
+and do/don't list, is in `docs/ART_DIRECTION.md`.
+`docs/realism_pass_compare.jpg` shows before and after the realism pass.
+
 Everything is generated in code and shaders; there are no textures or
 models. One "craft" shader renders every supply in the game:
 - corrugated cardboard, with worn kraft edges and visible flutes on cut edges
@@ -119,17 +127,26 @@ models. One "craft" shader renders every supply in the game:
 - knitted yarn, with real stitch patterns
 - masking tape, plastic buttons and caps, and foil
 
-Every box gets bevelled, light-catching edges and an inked crease along its
-folds. Walls and floors are built from cardboard panels, with painted trim.
-The world is dressed with bunting, string lights, taped-up posters, cut-out
-paper grass and flowers, and hanging felt signs. Soldiers are plush felt
-dolls in quilted cardboard vests. Lighting is a warm late-afternoon sun
-with bounce light, a split-tone colour grade and a gentle far depth of
-field. You can turn the expensive effects off under **Settings → High
-quality graphics**. Characters and guns get ink outlines. Defeated soldiers fold flat like
-paper and burst into confetti, and explosions are cotton-ball puffs. The
-skyline is cardboard stage flats with felt hills, and paper clouds hang on
-strings.
+**The palette is real-world.** Gateway is precast concrete, grey steel
+cladding, cellophane glass and charcoal felt tarmac. Saturated colour
+appears only where it would at a real airport:
+- safety yellow and orange
+- signal red
+- navy and teal airline livery
+- the occasional cargo container
+
+The lighting is neutral afternoon daylight with a natural sky, soft haze, an
+AgX filmic tonemap and a gentle photographic grade.
+
+Soldiers are plush felt dolls in quilted cardboard vests:
+- Cardstock wears navy.
+- Militia wears rust.
+
+You can turn the expensive effects off under **Settings → High quality
+graphics**. Characters and guns get ink outlines. Defeated soldiers fold flat
+like paper and burst into confetti, and explosions are cotton-ball puffs. The
+skyline is painted cardboard flats of concrete and glass towers in front of
+knitted hills. Teased-cotton clouds hang on fishing line.
 
 Sounds are synthesised at startup, so there are no audio files.
 

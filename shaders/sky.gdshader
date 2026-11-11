@@ -1,13 +1,13 @@
 shader_type sky;
 render_mode use_debanding;
 
-// A painted backdrop sky, like a hand-coloured theatre curtain: soft teal
-// to pale cream, with gentle brush swirls. Paper clouds are real objects.
+// A painted backdrop sky, matched to a real afternoon sky: hazy blue fading
+// to a pale grey-blue horizon, with faint brush texture. Clouds are real objects.
 
-uniform vec3 zenith : source_color = vec3(0.05, 0.42, 0.66);
-uniform vec3 horizon : source_color = vec3(0.7, 0.88, 0.88);
-uniform vec3 ground : source_color = vec3(0.55, 0.62, 0.5);
-uniform vec3 sun_tint : source_color = vec3(1.0, 0.93, 0.75);
+uniform vec3 zenith : source_color = vec3(0.3, 0.5, 0.72);
+uniform vec3 horizon : source_color = vec3(0.76, 0.81, 0.85);
+uniform vec3 ground : source_color = vec3(0.5, 0.5, 0.47);
+uniform vec3 sun_tint : source_color = vec3(1.0, 0.96, 0.88);
 
 float s_hash(vec2 p) {
 	vec3 p3 = fract(vec3(p.xyx) * 0.1031);
@@ -30,7 +30,7 @@ void sky() {
 	// Brush strokes: stretched noise following the dome.
 	float ang = atan(d.x, d.z);
 	float strokes = s_noise(vec2(ang * 6.0, d.y * 22.0)) * 0.6 + s_noise(vec2(ang * 18.0, d.y * 60.0)) * 0.4;
-	col *= 0.94 + strokes * 0.1;
+	col *= 0.97 + strokes * 0.05;
 	float sun = max(dot(d, LIGHT0_DIRECTION), 0.0);
 	col += sun_tint * (pow(sun, 24.0) * 0.45 + pow(sun, 4.0) * 0.12);
 	if (d.y < 0.0) {

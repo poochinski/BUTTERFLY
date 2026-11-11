@@ -10,7 +10,7 @@ enum InputMode { KEYBOARD, GAMEPAD }
 const SAVE_PATH := "user://papercut_profile.json"
 const TEAM_NAMES := ["Task Force Cardstock", "Corrugated Militia"]
 const TEAM_SHORT := ["CARDSTOCK", "MILITIA"]
-const TEAM_COLORS := [Color(0.24, 0.47, 0.88), Color(0.88, 0.3, 0.22)]
+const TEAM_COLORS := [Color(0.2, 0.28, 0.44), Color(0.6, 0.25, 0.18)]
 const RANKS := [
 	["Recruit", 0], ["Private", 800], ["Private First Class", 2000], ["Corporal", 4000],
 	["Sergeant", 7000], ["Staff Sergeant", 11000], ["Lieutenant", 16000], ["Captain", 23000],

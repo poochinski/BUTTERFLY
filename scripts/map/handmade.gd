@@ -25,10 +25,10 @@ static func build(map: GatewayMap) -> void:
 static func _tape_mat(kind := 0) -> Material:
 	match kind:
 		1:
-			return Craft.mat(Craft.Kind.TAPE, Color(0.38, 0.62, 0.9), 0, Color.WHITE, 1.0, 0.0, false)
+			return Craft.mat(Craft.Kind.TAPE, Color(0.36, 0.52, 0.72), 0, Color.WHITE, 1.0, 0.0, false)
 		2:
 			return Craft.mat(Craft.Kind.FOIL, Color(0.72, 0.73, 0.76), 0, Color.WHITE, 1.0, 0.0, false)
-	return Craft.mat(Craft.Kind.TAPE, Color(0.93, 0.86, 0.66), 0, Color.WHITE, 1.0, 0.0, false)
+	return Craft.mat(Craft.Kind.TAPE, Color(0.86, 0.8, 0.64), 0, Color.WHITE, 1.0, 0.0, false)
 
 
 ## Tape folded round a vertical corner: one strip on each face, each
@@ -168,7 +168,7 @@ static func cable(parent: Node3D, pts: Array, col: Color, r := 0.035) -> void:
 
 
 static func _yarn(root: Node3D) -> void:
-	var cols := [Color(0.85, 0.25, 0.22), Color(0.95, 0.75, 0.2), Color(0.25, 0.55, 0.85), Color(0.35, 0.65, 0.3), Color(0.9, 0.5, 0.7)]
+	var cols := [Color(0.18, 0.18, 0.2), Color(0.84, 0.66, 0.18), Color(0.5, 0.52, 0.55), Color(0.4, 0.4, 0.3), Color(0.82, 0.4, 0.14)]
 	# Floodlight masts and jet bridge legs.
 	for p: Vector3 in [Vector3(0, 0, -24), Vector3(56, 0, -34), Vector3(56, 0, 23), Vector3(14, 0, 23)]:
 		yarn_wrap(root, p, 0.22, 0.5, 1.3, cols[rng.randi() % cols.size()])
@@ -186,9 +186,9 @@ static func _yarn(root: Node3D) -> void:
 				continue
 			var p := a.lerp(c, float(i) / n)
 			yarn_wrap(root, p, 0.08, 1.9, 2.3, cols[i % cols.size()])
-	# Teal terminal pillars get a decorative yarn band.
+	# Concrete terminal pillars get a yellow-and-black impact band.
 	for p: Vector3 in [Vector3(-44, 0, -8), Vector3(-32, 0, -8), Vector3(-44, 0, 12), Vector3(-32, 0, 12)]:
-		yarn_wrap(root, p, 0.66, 1.4, 1.75, Color(0.95, 0.75, 0.2))
+		yarn_wrap(root, p, 0.66, 0.15, 0.6, Color(0.84, 0.66, 0.18))
 	# Ground power cable from the power cart to the airliner's nose.
 	var cab := []
 	for i in 16:
@@ -203,7 +203,7 @@ static func _yarn(root: Node3D) -> void:
 	for i in 30:
 		var t := i / 29.0
 		ext.append(Vector3(lerpf(-12.0, 30.0, t), 0.06, -25.2 + sin(t * 9.0) * 0.25))
-	cable(root, ext, Color(0.95, 0.55, 0.15), 0.03)
+	cable(root, ext, Color(0.82, 0.42, 0.14), 0.03)
 	# Tie-down straps knotted over the cargo containers.
 	for c: Vector3 in [Vector3(5, 0, -18.5), Vector3(7.3, 0, -18.3), Vector3(40, 0, -18), Vector3(42.3, 0, -18.2), Vector3(46, 0, 7), Vector3(48.4, 0, 7.4)]:
 		var m := Craft.mat(Craft.Kind.KNIT, cols[rng.randi() % cols.size()], 0, Color.WHITE, 3.0, 0.0)

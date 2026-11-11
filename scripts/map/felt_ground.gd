@@ -17,11 +17,11 @@ extends RefCounted
 ## cut pieces stay cheap to draw. All of it is decoration: the collision
 ## floor is the slab underneath.
 
-const TARMAC := Color(0.33, 0.34, 0.37)
+const TARMAC := Color(0.3, 0.31, 0.33)
 const SIDEWALK := Color(0.64, 0.63, 0.6)
-const GRASS_DARK := Color(0.17, 0.33, 0.14)
-const GRASS_MID := Color(0.25, 0.44, 0.18)
-const GRASS_LIGHT := Color(0.4, 0.54, 0.22)
+const GRASS_DARK := Color(0.18, 0.28, 0.14)
+const GRASS_MID := Color(0.27, 0.37, 0.19)
+const GRASS_LIGHT := Color(0.38, 0.44, 0.24)
 const MUD := Color(0.35, 0.25, 0.17)
 const MUD_DARK := Color(0.23, 0.155, 0.1)
 const TOP := 0.03  # height of the felt layer
@@ -134,9 +134,9 @@ static func build(map: GatewayMap) -> void:
 	var mud2 := Layer.new(Craft.felt_piece(MUD_DARK, Craft.Kind.FELT, 2, true, 0, Color.WHITE, 2.0))
 	var wet := Layer.new(Craft.felt_piece(Color(0.2, 0.13, 0.08), Craft.Kind.PLASTIC))
 	var oil := Layer.new(Craft.felt_piece(Color(0.1, 0.1, 0.12), Craft.Kind.PLASTIC))
-	var yellow := Layer.new(Craft.felt_piece(Color(0.98, 0.76, 0.12)))
-	var white := Layer.new(Craft.felt_piece(Color(0.95, 0.94, 0.9)))
-	var red := Layer.new(Craft.felt_piece(Color(0.86, 0.22, 0.18)))
+	var yellow := Layer.new(Craft.felt_piece(Color(0.84, 0.66, 0.18)))
+	var white := Layer.new(Craft.felt_piece(Color(0.84, 0.83, 0.8)))
+	var red := Layer.new(Craft.felt_piece(Color(0.6, 0.18, 0.15)))
 	var puddles := Layer.new(Craft.cellophane(Color(0.5, 0.6, 0.66, 0.55)))
 	var muddy_water := Layer.new(Craft.cellophane(Color(0.45, 0.36, 0.25, 0.6)))
 
@@ -515,7 +515,7 @@ static func _stains(oil: Layer, puddles: Layer) -> void:
 
 ## Stray threads lying on the ground, the way they end up on a work table.
 static func _threads(root: Node3D) -> void:
-	var cols := [Color(0.9, 0.3, 0.3), Color(0.95, 0.85, 0.3), Color(0.35, 0.6, 0.9), Color(0.95, 0.95, 0.9)]
+	var cols := [Color(0.2, 0.2, 0.22), Color(0.55, 0.5, 0.38), Color(0.5, 0.52, 0.56), Color(0.85, 0.84, 0.8)]
 	var layer := Layer.new(Craft.felt_piece(Color.WHITE, Craft.Kind.KNIT, 2, true))
 	for i in 26:
 		var start := Vector2(rng.randf_range(-12.0, 58.0), rng.randf_range(-36.0, 25.0))
@@ -568,7 +568,7 @@ static func _outside(l1: Layer, l2: Layer, l3: Layer, m1: Layer, m2: Layer, wet:
 ## into a tuft. Three sizes, four greens (plus straw), as MultiMeshes.
 static func _grass_tufts(root: Node3D, spots: Array) -> void:
 	var meshes := [_tuft_mesh(5, 0.16, 1), _tuft_mesh(6, 0.24, 2), _tuft_mesh(7, 0.36, 3)]
-	var cols := [Color(0.22, 0.42, 0.17), Color(0.3, 0.52, 0.2), Color(0.42, 0.58, 0.22), Color(0.18, 0.35, 0.15), Color(0.66, 0.6, 0.3)]
+	var cols := [Color(0.22, 0.33, 0.17), Color(0.29, 0.39, 0.2), Color(0.38, 0.45, 0.24), Color(0.19, 0.29, 0.15), Color(0.55, 0.52, 0.34)]
 	var buckets := {}
 	for s in spots:
 		var p: Vector3 = s
@@ -603,7 +603,7 @@ static func _tuft_mesh(blades: int, height: float, seed_value: int) -> ArrayMesh
 
 
 static func _flowers(root: Node3D, spots: Array) -> void:
-	var petal_cols := [Color(0.98, 0.98, 0.95), Color(1.0, 0.82, 0.2), Color(0.96, 0.45, 0.62), Color(0.68, 0.55, 0.95)]
+	var petal_cols := [Color(0.88, 0.87, 0.83), Color(0.84, 0.74, 0.36), Color(0.88, 0.87, 0.83), Color(0.6, 0.55, 0.66)]
 	var meshes := []
 	for c in petal_cols:
 		var st := SurfaceTool.new()
@@ -618,9 +618,9 @@ static func _flowers(root: Node3D, spots: Array) -> void:
 		var st3 := SurfaceTool.new()
 		st3.append_from(centre, 0, Transform3D(Basis.from_scale(Vector3(1, 0.6, 1)), Vector3(0, 0.19, 0)))
 		st3.commit(m)
-		m.surface_set_material(0, Craft.felt_piece(Color(0.3, 0.55, 0.2), Craft.Kind.FELT, 1, false))
+		m.surface_set_material(0, Craft.felt_piece(Color(0.28, 0.4, 0.2), Craft.Kind.FELT, 1, false))
 		m.surface_set_material(1, Craft.felt_piece(c, Craft.Kind.FELT, 1, false))
-		m.surface_set_material(2, Craft.felt_piece(Color(1.0, 0.75, 0.15), Craft.Kind.PLASTIC, 0, false))
+		m.surface_set_material(2, Craft.felt_piece(Color(0.8, 0.62, 0.2), Craft.Kind.PLASTIC, 0, false))
 		meshes.append(m)
 	var buckets := [[], [], [], []]
 	for s in spots:

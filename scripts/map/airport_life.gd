@@ -232,7 +232,7 @@ static func _servicing(root: Node3D, b: MapBuilder) -> void:
 	for i in 4:
 		var t := 0.2 + i * 0.2
 		var p := Vector3(3.2, lerpf(0.9, 2.5, t), lerpf(5.6, 1.6, t))
-		Craft.box(root, p, Vector3(0.45, 0.3, 0.3), _m(Craft.Kind.FELT, [Craft.RED, Craft.TEAL, Craft.PURPLE, Craft.ORANGE][i], Craft.Pattern.STITCH, Craft.CREAM), Vector3(-0.38, rng.randf_range(-0.3, 0.3), 0))
+		Craft.box(root, p, Vector3(0.45, 0.3, 0.3), _m(Craft.Kind.FELT, [Color(0.18, 0.19, 0.21), Craft.BLUE, Color(0.36, 0.2, 0.2), Color(0.3, 0.31, 0.33)][i], Craft.Pattern.STITCH, Craft.CREAM), Vector3(-0.38, rng.randf_range(-0.3, 0.3), 0))
 	# Hydrant fuel cart under the north wing with its hose plugged in.
 	var cart := b.solid(Vector3(20.0, 0.7, -12.4), Vector3(1.6, 0.9, 3.0), _m(Craft.Kind.CARDBOARD, Color(0.85, 0.85, 0.88)), 0.2)
 	Craft.box(cart, Vector3(0, 0.5, 0), Vector3(1.4, 0.12, 2.6), _m(Craft.Kind.CARDBOARD, Craft.RED))
@@ -408,17 +408,17 @@ static func _clutter(root: Node3D) -> void:
 		for k in 4:
 			Craft.box(np, Vector3(-0.08 + (k % 2) * 0.16, 0.012, -0.07 + (k / 2) * 0.12), Vector3(0.13, 0.002, 0.08), Craft.mat(Craft.Kind.PAPER, Color(0.45, 0.45, 0.48)), Vector3.ZERO, false)
 		Craft.box(np, Vector3(0, 0.012, -0.115), Vector3(0.32, 0.002, 0.025), Craft.mat(Craft.Kind.PAPER, Craft.INK), Vector3.ZERO, false)
-	# Paper airplanes that didn't make it.
+	# Dropped boarding passes and flyers.
 	for i in 9:
 		var p := Vector3(rng.randf_range(-55.0, 55.0), 0.06, rng.randf_range(-35.0, 24.0))
 		var pl := Craft.pivot(root, p, Vector3(0, rng.randf() * TAU, rng.randf_range(-0.4, 0.4)))
-		var col: Color = [Craft.WHITE, Craft.PINK, Craft.YELLOW, Craft.TEAL][i % 4]
+		var col: Color = [Craft.WHITE, Craft.CREAM, Color(0.8, 0.82, 0.84), Craft.WHITE][i % 4]
 		for side: float in [-1.0, 1.0]:
 			var pts := PackedVector2Array([Vector2(0, -0.22), Vector2(side * 0.15, 0.14), Vector2(0, 0.1)])
 			Craft.part(pl, Craft.cutout(pts, 0.003), Craft.mat(Craft.Kind.PAPER, col, 0, Color.WHITE, 1.0, 0.0, false), Vector3.ZERO, Vector3(PI * 0.5, 0, side * 0.3))
-	# Confetti bits drifted against walls and under seats.
+	# Paper scraps and receipt shreds drifted against walls and under seats.
 	var bits := []
-	var bit_cols := [Craft.PINK, Craft.YELLOW, Craft.TEAL, Craft.ORANGE]
+	var bit_cols := [Craft.WHITE, Craft.CREAM, Color(0.62, 0.62, 0.6), Craft.KRAFT]
 	var bit_sets := [[], [], [], []]
 	for i in 360:
 		var near_seats := rng.randf() < 0.5

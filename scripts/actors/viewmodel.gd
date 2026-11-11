@@ -10,7 +10,7 @@ const HIP_ROT := Vector3(0.0, 0.05, 0.0)
 const SPRINT_POS := Vector3(0.2, -0.27, -0.34)
 const SPRINT_ROT := Vector3(-0.4, 0.95, 0.4)
 
-var team_color := Color(0.24, 0.45, 0.85)
+var team_color := Color(0.2, 0.28, 0.44)
 var weapon_id := ""
 var gun: Node3D
 var knife: Node3D
