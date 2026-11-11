@@ -143,3 +143,93 @@ Rules:
 - [x] R8. Verification:
   - before/after comparison (`realism_pass_compare.jpg`)
   - full bot match with no errors
+
+## Arms, gear and animation
+
+**Guns are prop-maker replicas.** Picture the painted cardboard props a
+skilled hobbyist builds for a film:
+- **Real proportions, finishes and parts:** they look like the real thing
+  from a few metres away, but are visibly hand-made up close.
+- **Laminated card:** every major part is cut from a true side profile
+  and laminated. Painted card skins sit over a kraft core that shows as a
+  thin line at the cut edges.
+- **Real-world finishes:**
+  - matte black receivers
+  - flat dark earth or black polymer furniture
+  - OD green sniper stocks
+  - wood-grained kraft for AK and shotgun furniture
+- **Model-maker weathering:** the paint is rubbed and scratched, and edges
+  are dry-brushed gunmetal (`dry_brush` in the craft shader).
+- **Hardware from the craft drawer:**
+  - foil for barrels and bare steel
+  - steel brads for pins
+  - real brass foil for cartridges and beads
+  - cellophane lenses
+  - felt webbing slings
+  - cloth tape, with a strip of team-coloured tape on each stock
+- **Real details:**
+  - ejection ports, dust covers, selectors, mag releases
+  - charging handles, M-LOK slots, flash hiders
+  - three-dot pistol sights
+  - a scope with bells, turrets and eyecup
+  - red shotgun shells in a side saddle
+  - ribbed magazines
+
+**Soldiers are felt action figures in real kit.** The doll proportions
+stay. Everything else is sewn and glued like a hobbyist's 1/6 figure:
+- **Uniforms:** cut-felt camouflage (`Pattern.CAMO`).
+  - Cardstock wears navy-grey urban camo.
+  - The Militia wear rust jackets and khaki cargos.
+- **Cardstock kit:**
+  - a coyote plate carrier with stitched MOLLE rows, mag pouches with mags
+    showing, an admin pouch with a flag patch, a radio and antenna, and a
+    hydration pack
+  - a covered helmet with NVG mount, rails, headset and strobe
+  - knee pads
+- **Militia kit:** a chest rig on X-straps, a knit beanie, and a
+  red-and-cream checked shemagh.
+- **Variety:** skin tones, hair colour and eyewear vary per soldier. Faces
+  are simple: small button eyes, a nose and a stitched mouth. There is no
+  cartoon blush.
+
+**First-person arms:**
+- camo sleeves with stitched cuffs and a velcro flag patch
+- black tactical gloves with hard knuckle armour
+- a field watch on the left wrist
+
+**Animation is grounded and mechanical:**
+- **Reloads:** the support hand really goes to the magazine. It strips the
+  mag and drops it to the floor (it lands and stays a while), fetches a new
+  one from the vest and seats it with a slap.
+- **Empty reloads:** these also work the action: the charging handle, the
+  slide release or the bolt.
+- **Shotguns:** load shell by shell into the loading port.
+- **Pistols:** the slide snaps back on every shot and locks open on empty.
+- **Sniper:** the bolt is cycled by hand after every shot.
+- **Brass:** spent cases fly from the ejection port, bounce and lie on the
+  floor.
+- **Movement and swaps:**
+  - sprinting swings the gun in a loose figure of eight
+  - jumps lift the gun and landings drop it
+  - swaps roll the gun out of view
+- **Third-person dolls:** they breathe, lean into crouch-walks, carry
+  the rifle across the chest when sprinting, and reload with a tilt of the
+  gun and the support hand.
+
+**Effects:**
+- muzzle flashes are layered tissue paper with a grey cotton smoke wisp
+- tracers are thin and brief
+- explosions are grey and sooty cotton around a tissue fireball
+- debris and death confetti use muted, real colours
+
+## Arms and gear pass checklist
+
+- [x] W1. Armory showcase (`--armory=0..10`) and this section
+- [x] W2. Real-world finishes and replica weathering (`dry_brush`)
+- [x] W3. Detail pass on all six guns, the knife and the frag
+- [x] W4. Soldier kit, camo uniforms, varied faces; meshes merged per limb
+- [x] W5. First-person sleeves, gloves, watch and patch
+- [x] W6. Hand-driven reloads, mag drops, charging, slides, bolts, brass,
+  sprint, jump and swap motion, third-person reload and idle
+- [x] W7. Tissue-paper flashes, cotton smoke, subtle tracers, muted debris
+- [x] W8. Before/after comparison, full match with no errors

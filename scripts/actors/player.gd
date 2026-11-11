@@ -403,7 +403,7 @@ func _handle_weapons(delta: float, locked: bool) -> void:
 		reload_pressed = Input.is_action_just_released("use") and use_hold < USE_HOLD_TIME
 	if not locked and reload_pressed and w.can_reload():
 		w.start_reload()
-		vm.start_reload(w.reload_total)
+		vm.start_reload(w.reload_total, w.mag <= 0)
 		sprinting = false
 		Sfx.play_3d("reload", global_position, -4.0)
 
@@ -424,7 +424,7 @@ func _handle_weapons(delta: float, locked: bool) -> void:
 				Sfx.play_3d("dry", global_position, -4.0)
 				if w.can_reload():
 					w.start_reload()
-					vm.start_reload(w.reload_total)
+					vm.start_reload(w.reload_total, w.mag <= 0)
 					Sfx.play_3d("reload", global_position, -4.0)
 			_semi_queued = false
 		elif w.can_fire():
@@ -432,7 +432,7 @@ func _handle_weapons(delta: float, locked: bool) -> void:
 			_fire_once(w)
 	if w.mag <= 0 and w.reloading <= 0.0 and w.can_reload() and w.cooldown <= 0.0:
 		w.start_reload()
-		vm.start_reload(w.reload_total)
+		vm.start_reload(w.reload_total, w.mag <= 0)
 		Sfx.play_3d("reload", global_position, -4.0)
 
 
@@ -513,6 +513,7 @@ func _fire_once(w: Weapon) -> void:
 	yaw += deg_to_rad(randf_range(-float(rec[1]), float(rec[1]))) * steady
 	_recoil_vis = minf(_recoil_vis + float(rec[0]) * 0.02, 0.08)
 	vm.kick(clampf(float(rec[0]) / 1.2, 0.4, 2.0))
+	vm.fired(w.mag <= 0)
 	Fx.muzzle_flash(muzzle, true)
 	if bool(w.data.get("pump", false)) or bool(w.data.get("bolt", false)):
 		Sfx.play_3d("pump", global_position, -6.0)

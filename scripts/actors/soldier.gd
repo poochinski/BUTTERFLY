@@ -244,7 +244,7 @@ func die(killer: Soldier, weapon_id: String, headshot: bool) -> void:
 	deaths += 1
 	streak = 0
 	Sfx.play_3d("death", center_position(), 0.0)
-	Fx.confetti(center_position(), [team_color(), Craft.CREAM, team_color().lightened(0.3), Craft.YELLOW], 70, 4.5)
+	Fx.confetti(center_position(), [team_color(), team_color().darkened(0.35), Craft.CREAM, Craft.KRAFT], 70, 4.5)
 	if model:
 		model.play_death(headshot)
 	died.emit(self, killer, weapon_id, headshot)

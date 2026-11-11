@@ -5,7 +5,7 @@ extends RefCounted
 ## means the whole game shares a handful of shader variants.
 
 enum Kind { CARDBOARD, PAPER, FELT, KNIT, TAPE, PLASTIC, FOIL, GLOW }
-enum Pattern { NONE, HAZARD, DOTS, CHECKER, WINDOWS, STITCH, BANDS, FLOOR, WALL }
+enum Pattern { NONE, HAZARD, DOTS, CHECKER, WINDOWS, STITCH, BANDS, FLOOR, WALL, CAMO }
 
 const CRAFT_SHADER := preload("res://shaders/craft.gdshader")
 const CRAFT_VM_SHADER := preload("res://shaders/craft_vm.gdshader")

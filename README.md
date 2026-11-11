@@ -138,15 +138,30 @@ appears only where it would at a real airport:
 The lighting is neutral afternoon daylight with a natural sky, soft haze, an
 AgX filmic tonemap and a gentle photographic grade.
 
-Soldiers are plush felt dolls in quilted cardboard vests:
-- Cardstock wears navy.
-- Militia wears rust.
+Soldiers are felt action figures in real kit (see below).
 
 You can turn the expensive effects off under **Settings → High quality
 graphics**. Characters and guns get ink outlines. Defeated soldiers fold flat
 like paper and burst into confetti, and explosions are cotton-ball puffs. The
 skyline is painted cardboard flats of concrete and glass towers in front of
 knitted hills. Teased-cotton clouds hang on fishing line.
+
+**Arms and gear.** The guns are prop-maker replicas: laminated
+card with real finishes (matte black, flat dark earth, OD green, wood
+grain), rubbed paint and dry-brushed edges. They have foil barrels, brads
+for pins, cellophane lenses and webbing slings.
+
+The soldiers are felt action figures in real kit:
+- Cardstock: plate carriers with MOLLE, mag pouches, radios, and helmets
+  with NVG mounts.
+- Militia: chest rigs, beanies and shemaghs.
+
+Uniforms are cut-felt camo, and every soldier's face and skin tone vary.
+
+Reloads are fully hand-animated: the old mag drops to the floor, a new one
+is fetched and slapped home, and the gun is charged on empty. Slides,
+bolts and pumps all cycle, and brass bounces across the floor. See
+`docs/ART_DIRECTION.md` and `docs/arms_pass_compare.jpg`.
 
 Sounds are synthesised at startup, so there are no audio files.
 

@@ -17,6 +17,9 @@ uniform vec4 color2 : source_color = vec4(1.0, 1.0, 1.0, 1.0);
 uniform int pattern = 0;
 uniform float pattern_scale = 1.0;
 uniform float wear = 1.0;
+// Model-maker weathering for painted parts (guns, gear): rubbed paint and
+// dry-brushed highlights on edges. 0 = off.
+uniform float dry_brush = 0.0;
 uniform float bumps = 1.0;
 uniform bool box_edges = true;
 // Cut felt/paper pieces: 1 = caps face local Z (cut-outs), 2 = caps face Y
@@ -149,6 +152,18 @@ void fragment() {
 		base = mix(base, color2.rgb, (1.0 - smoothstep(0.006, 0.011, sd)) * dash);
 	} else if (pattern == 6) {
 		base = mix(base, color2.rgb, step(0.5, fract(p.y * pattern_scale)));
+	} else if (pattern == 9) {
+		// Cut-felt camouflage: blotches of a second tone and a dark third
+		// tone appliqued on, each piece edged by a darker cut line.
+		vec2 cq = vec2(p.x + p.z * 0.73, p.y + p.z * 0.31) * pattern_scale + v_seed * 5.0;
+		float n1 = c_fbm(cq);
+		float n2 = c_fbm(cq * 1.3 + 11.7);
+		float ca = smoothstep(0.535, 0.55, n1);
+		float cb = smoothstep(0.585, 0.6, n2);
+		base = mix(base, color2.rgb, ca);
+		base = mix(base, base * 0.58, cb * (1.0 - ca * 0.5));
+		float cut = (1.0 - smoothstep(0.0, 0.01, abs(n1 - 0.543))) + (1.0 - smoothstep(0.0, 0.01, abs(n2 - 0.593)));
+		base *= 1.0 - 0.22 * clamp(cut, 0.0, 1.0);
 	}
 
 	float h = 0.0;
@@ -226,10 +241,24 @@ void fragment() {
 		float fleck = step(0.985, c_hash(floor(suv * 260.0)));
 		base = mix(base, base * vec3(0.8, 0.85, 1.05), fleck * 0.6);
 		h = (c_fbm(suv * 4.0) - 0.5) * 0.004 * bumps + (fib - 0.5) * 0.0006;
+		if (dry_brush > 0.0) {
+			// Rubbed, handled paint and fine scratches, then a dry-brushed
+			// gunmetal highlight along every edge, the way prop makers
+			// weather a painted replica.
+			float rub = smoothstep(0.6, 0.85, c_fbm(suv * 3.4)) * dry_brush;
+			base = mix(base, base * 1.45 + vec3(0.02), rub * 0.5);
+			float scratch = step(0.93, c_noise(c_rot(suv, 0.6) * vec2(380.0, 5.0))) * smoothstep(0.5, 0.75, c_fbm(suv * 1.7));
+			base = mix(base, vec3(0.16, 0.16, 0.17), scratch * 0.55 * dry_brush);
+			if (box_edges) {
+				float rim_w = 0.003 + 0.006 * c_noise(suv * 9.0);
+				float edge_rub = 1.0 - smoothstep(0.0, rim_w, edge);
+				base = mix(base, vec3(0.2, 0.2, 0.21) + base * 0.6, edge_rub * 0.75 * dry_brush);
+			}
+		}
 		bevel = 0.008;
 		ink = 0.35;
-		rough = 0.93;
-		spec = 0.22;
+		rough = dry_brush > 0.0 ? 0.78 : 0.93;
+		spec = dry_brush > 0.0 ? 0.34 : 0.22;
 	} else if (kind == 2) {
 		// Felt: a mat of short fibres lying every which way, blotchy dye,
 		// little pills of fluff, and a soft fuzzy sheen at grazing angles.
