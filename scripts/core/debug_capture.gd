@@ -3,6 +3,7 @@ extends Node
 ## Developer helper for automated screenshots. Arguments after "--":
 ##   --shot=/path.png --wait=5 --play --class=0 --pos=x,y,z --yaw=r --pitch=r
 ##   --ads --fire=2.0 --board --nohud --nobots --see_enemy --view=x,y,z,tx,ty,tz
+##   --streak=heli|dogs|uav|ready --streak_team=0|1 (call a streak at 1 s)
 ##   --weapon=id (hold that gun) --reload=t (press reload at t seconds) --empty (start with an empty mag)
 ##   --armory=0..10  a lit showcase of every gun, the knife, the frag and
 ##                   both soldiers (0 wide, 1 Cardstock, 2 rifles, 3 second
@@ -35,9 +36,10 @@ func _ready() -> void:
 					s.set_physics_process(false)
 		if _opts.has("weapon"):
 			var wid := String(_opts["weapon"])
-			p.weapons[p.current] = Weapon.new(wid)
-			p.vm.set_weapon(wid, p.team_color())
-			p.model.set_weapon(wid)
+			var watt := String(_opts.get("att", ""))
+			p.weapons[p.current] = Weapon.new(wid, watt)
+			p.vm.set_weapon(wid, p.team_color(), watt)
+			p.model.set_weapon(wid, watt)
 		if _opts.has("pos"):
 			var v := String(_opts["pos"]).split(",")
 			p.global_position = Vector3(float(v[0]), float(v[1]), float(v[2]))
@@ -61,6 +63,8 @@ func _ready() -> void:
 					(s as Bot).yaw = p.yaw + PI
 					s.rotation.y = p.yaw + PI
 					break
+	if _opts.has("cac") and main.menu:
+		main.menu._open_cac()
 	if _opts.has("armory"):
 		_build_armory(int(_opts["armory"]))
 	if _opts.has("view"):
@@ -103,6 +107,19 @@ func _process(delta: float) -> void:
 				w.mag = 5
 			w.start_reload()
 			p.vm.start_reload(w.reload_total, w.mag <= 0)
+		if _opts.has("streak") and _t > 1.0 and not has_meta("streaked"):
+			set_meta("streaked", true)
+			var st_team := int(_opts.get("streak_team", "0"))
+			match String(_opts["streak"]):
+				"heli":
+					mn._call_heli(st_team, p)
+				"dogs":
+					mn._call_dogs(st_team, p)
+				"uav":
+					mn._call_uav(st_team, p)
+				"ready":
+					p.streak = 7
+					mn.streaks_ready = {"uav": true, "heli": true, "dogs": true}
 		if _opts.has("hold_pitch"):
 			p.aim_pitch = float(_opts["pitch"])
 	if _opts.has("banner") and _t > 0.5 and not has_meta("banner_done") and mn:
@@ -124,6 +141,9 @@ func _process(delta: float) -> void:
 				if s is Bot and s.team == 1:
 					info += " bot1@%s" % str(s.global_position.snapped(Vector3(0.1, 0.1, 0.1)))
 					break
+		for d in get_tree().get_nodes_in_group("soldiers"):
+			if d is AttackDog:
+				info += " dog@%s%s" % [str(d.global_position.snapped(Vector3(0.1, 0.1, 0.1))), "" if d.alive else "(dead)"]
 		print("Saved ", out, " fps=", Engine.get_frames_per_second(), info)
 		get_tree().quit()
 
@@ -140,22 +160,26 @@ func _build_armory(shot: int) -> void:
 	stand.global_position = base
 	var felt := Craft.mat(Craft.Kind.FELT, Color(0.3, 0.33, 0.3), 0, Color.WHITE, 1.0, 0.0)
 	Craft.box(stand, Vector3(0, -0.05, 0), Vector3(3.6, 0.1, 1.8), felt)
-	var ids := ["m4", "ak", "sniper", "smg", "shotgun", "pistol"]
+	var ids := [["m4", "acog"], ["ak", "reddot"], ["sniper", "suppressor"], ["smg", ""], ["shotgun", "grip"], ["pistol", "suppressor"],
+		["lmg", ""], ["dmr", "acog"], ["revolver", ""]]
+	if _opts.has("att"):
+		for e: Array in ids:
+			e[1] = String(_opts["att"])
 	for i in ids.size():
-		var g := GunBuilder.build(ids[i], false, Game.TEAM_COLORS[0])
+		var g := GunBuilder.build(ids[i][0], false, Game.TEAM_COLORS[0], ids[i][1])
 		stand.add_child(g)
 		var row := i / 3
 		var col := i % 3
 		# Lie each gun on its side, barrel to the right.
-		g.position = Vector3(-1.15 + col * 1.15, 0.22, -0.4 + row * 0.6)
+		g.position = Vector3(-1.15 + col * 1.15, 0.22, -0.55 + row * 0.5)
 		g.rotation = Vector3(0, -PI * 0.5, 0)
 	var kn := GunBuilder.knife(false)
 	stand.add_child(kn)
-	kn.position = Vector3(1.0, 0.03, 0.55)
+	kn.position = Vector3(-2.4, 0.03, 0.75)
 	kn.rotation = Vector3(0, -PI * 0.5, PI * 0.5)
 	var fr := GunBuilder.frag(false)
 	stand.add_child(fr)
-	fr.position = Vector3(1.4, 0.05, 0.5)
+	fr.position = Vector3(-2.0, 0.05, 0.75)
 	for t in 2:
 		var m := SoldierModel.new()
 		m.team = t
@@ -181,6 +205,7 @@ func _build_armory(shot: int) -> void:
 		[Vector3(-1.05, 0.65, 0.95), Vector3(-1.05, 0.2, 0.2)],
 		[Vector3(0.2, 0.7, 1.05), Vector3(0.2, 0.2, 0.2)],
 		[Vector3(1.25, 0.55, 0.95), Vector3(1.25, 0.1, 0.35)],
+		[Vector3(0.3, 2.6, 1.6), Vector3(0.3, 0.1, -0.05)],
 	]
 	var v: Array = views[clampi(shot, 0, views.size() - 1)]
 	var from: Vector3 = base + v[0]

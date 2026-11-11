@@ -77,6 +77,40 @@ func _wav(samples: PackedFloat32Array) -> AudioStreamWAV:
 	return w
 
 
+## A looping helicopter rotor: thudding blade slaps over a turbine whine.
+func _rotor() -> AudioStreamWAV:
+	var n := int(RATE * 1.0)
+	var s := PackedFloat32Array()
+	s.resize(n)
+	var lp := 0.0
+	for i in n:
+		var t := float(i) / RATE
+		var ph := fmod(t * 14.0, 1.0)
+		var slap := exp(-ph * 18.0)
+		lp += (_rand() - lp) * 0.08
+		var whine := sin(TAU * 620.0 * t) * 0.04 + sin(TAU * 1240.0 * t) * 0.015
+		s[i] = (lp * 2.2 * (0.35 + slap) + sin(TAU * 56.0 * t) * slap * 0.6) * 0.7 + whine
+	var w := _wav(s)
+	w.loop_mode = AudioStreamWAV.LOOP_FORWARD
+	w.loop_begin = 0
+	w.loop_end = n
+	return w
+
+
+## A short dog bark: a pitched growl with a noisy edge.
+func _bark() -> AudioStreamWAV:
+	var n := int(RATE * 0.32)
+	var s := PackedFloat32Array()
+	s.resize(n)
+	for i in n:
+		var t := float(i) / RATE
+		var env := minf(t * 60.0, 1.0) * exp(-t * 9.0)
+		var f := 420.0 - t * 500.0
+		var v := sin(TAU * f * t) * 0.6 + sin(TAU * f * 2.02 * t) * 0.3 + _rand() * 0.35
+		s[i] = v * env
+	return _wav(s)
+
+
 ## Gunshot: a noise crack, a low body thump, and a papery snap on top.
 func _shot(len: float, body_hz: float, crack: float, tail: float, lp: float, snap := 0.35) -> AudioStreamWAV:
 	var n := int(len * RATE)
@@ -222,6 +256,9 @@ func _build_bank() -> void:
 	_bank["death"] = _noise_burst(0.55, 0.45, 6.0, 0.5, 0.25)
 	_bank["hitmarker"] = _tone([1900.0], 0.045, 0, 60.0, 0.55)
 	_bank["hit_kill"] = _tone([1900.0, 2500.0], 0.05, 0, 50.0, 0.6)
+	_bank["rotor"] = _rotor()
+	_bank["bark"] = _bark()
+	_bank["heli_gun"] = _shot(0.22, 95.0, 46.0, 14.0, 0.5, 0.4)
 	_bank["ui_click"] = _tone([880.0], 0.06, 0, 40.0, 0.45)
 	_bank["ui_move"] = _tone([620.0], 0.04, 0, 60.0, 0.3)
 	_bank["streak_ready"] = _tone([523.25, 659.25, 783.99, 1046.5], 0.09, 0, 10.0, 0.45)

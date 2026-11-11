@@ -7,6 +7,7 @@ const LIFETIME := 35.0
 const REACH := 1.9
 
 var weapon_id := ""
+var att := ""
 var mag := 0
 var reserve := 0
 var _life := LIFETIME
@@ -14,12 +15,13 @@ var _model: Node3D
 var _t := 0.0
 
 
-func setup(id: String, m: int, r: int, pos: Vector3, team := 0) -> void:
+func setup(id: String, m: int, r: int, pos: Vector3, team := 0, attachment := "") -> void:
 	weapon_id = id
+	att = attachment
 	mag = m
 	reserve = r
 	add_to_group("pickups")
-	_model = GunBuilder.build(id, false, Game.TEAM_COLORS[team])
+	_model = GunBuilder.build(id, false, Game.TEAM_COLORS[team], att)
 	add_child(_model)
 	_model.scale = Vector3.ONE * 1.15
 	var space := get_world_3d().direct_space_state
@@ -33,7 +35,7 @@ func setup(id: String, m: int, r: int, pos: Vector3, team := 0) -> void:
 
 
 func display_name() -> String:
-	return String(WeaponDB.DATA[weapon_id]["name"])
+	return String(WeaponDB.DATA[weapon_id]["name"]) + (" + " + String(WeaponDB.ATTACH[att]) if att != "" else "")
 
 
 func _process(delta: float) -> void:

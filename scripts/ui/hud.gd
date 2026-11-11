@@ -136,8 +136,8 @@ func setup(m: MatchManager) -> void:
 	_streak_track = StreakTrack.new()
 	_streak_track.hud = self
 	_streak_track.set_anchors_preset(Control.PRESET_CENTER_RIGHT)
-	_streak_track.position = Vector2(-110, -120)
-	_streak_track.size = Vector2(90, 240)
+	_streak_track.position = Vector2(-240, -150)
+	_streak_track.size = Vector2(90, 250)
 	_streak_track.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(_streak_track)
 
@@ -201,7 +201,8 @@ func _on_kill(killer: Soldier, victim: Soldier, weapon_id: String, headshot: boo
 	row.add_theme_constant_override("separation", 8)
 	if killer and killer != victim:
 		row.add_child(UIKit.label(killer.display_name, 20, Game.TEAM_COLORS[killer.team].lightened(0.4)))
-	var wname := "Knife" if weapon_id == "knife" else ("Frag" if weapon_id == "frag" else ("Fall" if weapon_id == "fall" else String(WeaponDB.DATA[weapon_id]["name"]) if WeaponDB.DATA.has(weapon_id) else weapon_id))
+	var special := {"knife": "Knife", "frag": "Frag", "fall": "Fall", "heli": "Attack Heli", "dogs": "Dogs"}
+	var wname: String = special[weapon_id] if special.has(weapon_id) else (String(WeaponDB.DATA[weapon_id]["name"]) if WeaponDB.DATA.has(weapon_id) else weapon_id)
 	row.add_child(UIKit.label("[" + wname + ("  HS" if headshot else "") + "]", 18, UIKit.ACCENT))
 	row.add_child(UIKit.label(victim.display_name, 20, Game.TEAM_COLORS[victim.team].lightened(0.4)))
 	_feed.add_child(row)
@@ -341,7 +342,16 @@ class CenterOverlay:
 
 	func damage(amount: float, from_dir: Vector3) -> void:
 		_dmg = minf(_dmg + amount / 60.0, 1.0)
-		_arrows.append({"dir": -from_dir, "t": 1.4})
+		# Remember where the shot came from in the world, so the indicator
+		# keeps pointing at it as you turn and move.
+		var p := hud.mm.player
+		var src := p.global_position - from_dir.normalized() * 12.0 if p else Vector3.ZERO
+		for a in _arrows:
+			if (a["pos"] as Vector3).distance_to(src) < 3.0:
+				a["t"] = 1.8
+				a["w"] = minf(float(a["w"]) + amount / 40.0, 1.0)
+				return
+		_arrows.append({"pos": src, "t": 1.8, "w": clampf(0.45 + amount / 40.0, 0.45, 1.0)})
 
 	func _process(delta: float) -> void:
 		_hit = maxf(0.0, _hit - delta * 4.0)
@@ -386,16 +396,34 @@ class CenterOverlay:
 				var a2 := hurt * (1.0 - t) * 0.12
 				var inset := t * size.y * 0.22
 				draw_rect(Rect2(Vector2(inset, inset), size - Vector2(inset, inset) * 2.0), Color(0.7, 0.05, 0.05, a2), false, size.y * 0.012)
-		# Damage direction arrows (torn paper wedges around the centre).
+		# Damage direction: a red splash bleeding in from the screen edge on the
+		# side the shots came from, plus a curved red arc around the centre
+		# pointing at the shooter, both fading over a second or two.
 		for a3 in _arrows:
-			var d3: Vector3 = a3["dir"]
-			var local := p.global_transform.basis.inverse() * d3
+			var to: Vector3 = (a3["pos"] as Vector3) - p.global_position
+			var local := p.camera.global_transform.basis.inverse() * to
 			var ang := atan2(local.x, -local.z)
 			var dir2 := Vector2(sin(ang), -cos(ang))
-			var base := c + dir2 * 150.0
-			var side := Vector2(-dir2.y, dir2.x)
-			var alpha := clampf(float(a3["t"]), 0.0, 1.0)
-			draw_colored_polygon(PackedVector2Array([base + dir2 * 30.0, base + side * 34.0, base - side * 34.0]), Color(0.85, 0.1, 0.08, alpha * 0.85))
+			var alpha := clampf(float(a3["t"]) / 1.2, 0.0, 1.0) * float(a3["w"])
+			# Edge glow: a soft radial fan from the border point.
+			var k := minf(absf(size.x * 0.5 / maxf(absf(dir2.x), 0.001)), absf(size.y * 0.5 / maxf(absf(dir2.y), 0.001)))
+			var edge := c + dir2 * k
+			var pts := PackedVector2Array([edge])
+			var cols := PackedColorArray([Color(0.62, 0.02, 0.02, 0.55 * alpha)])
+			var rad := size.y * 0.42
+			for i in 25:
+				var t := -PI * 0.5 + PI * i / 24.0
+				var side := Vector2(-dir2.y, dir2.x)
+				var q := edge + (-dir2 * cos(t) * 0.75 + side * sin(t) * 1.25) * rad
+				pts.append(q)
+				cols.append(Color(0.62, 0.02, 0.02, 0.0))
+			draw_polygon(pts, cols)
+			# The arc around the crosshair.
+			var r0 := size.y * 0.2
+			var th := -PI * 0.5 + ang
+			for j in 5:
+				var w := 0.5 - j * 0.07
+				draw_arc(c, r0 + j * 5.0, th - w, th + w, 28, Color(0.78, 0.04, 0.03, alpha * (0.85 - j * 0.15)), 7.0, true)
 
 	func _draw_scope(c: Vector2) -> void:
 		var r := size.y * 0.46
@@ -528,16 +556,20 @@ class StreakTrack:
 		var n := p.streak
 		var ink := Color(0.12, 0.07, 0.05, 0.9)
 		var x := size.x * 0.5
-		for i in MatchManager.UAV_KILLS:
-			var c := Vector2(x, size.y - 30.0 - i * 34.0)
-			draw_circle(c, 13.0, ink)
-			var filled := i < n
-			draw_circle(c, 10.0, UIKit.ACCENT if filled else Color(1, 1, 1, 0.18))
-		var top := Vector2(x, size.y - 30.0 - MatchManager.UAV_KILLS * 34.0 - 6.0)
-		var label := "UAV" if not hud.mm.uav_ready else "UAV!"
-		var fw := UIKit.TITLE_FONT.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, 22).x
-		draw_string_outline(UIKit.TITLE_FONT, top + Vector2(-fw * 0.5, 0), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 22, 8, ink)
-		draw_string(UIKit.TITLE_FONT, top + Vector2(-fw * 0.5, 0), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color(0.7, 0.9, 1.0) if hud.mm.uav_ready else UIKit.PAPER)
+		# Seven pips up the side, with each reward labelled at its kill
+		# count; ready rewards glow and show their key.
+		var keys := ["5", "6", "7"] if Game.input_mode == Game.InputMode.KEYBOARD else ["UP", "RIGHT", "LEFT"]
+		for i in MatchManager.DOG_KILLS:
+			var c := Vector2(x, size.y - 30.0 - i * 30.0)
+			draw_circle(c, 12.0, ink)
+			draw_circle(c, 9.0, UIKit.ACCENT if i < n else Color(1, 1, 1, 0.18))
+		for si in MatchManager.STREAKS.size():
+			var st: Array = MatchManager.STREAKS[si]
+			var ready: bool = hud.mm.streaks_ready.has(st[0])
+			var c2 := Vector2(x + 22.0, size.y - 30.0 - (int(st[1]) - 1) * 30.0 + 8.0)
+			var label: String = String(st[2]) + ("  [" + String(keys[si]) + "]" if ready else "")
+			draw_string_outline(UIKit.TITLE_FONT, c2, label, HORIZONTAL_ALIGNMENT_LEFT, -1, 20, 8, ink)
+			draw_string(UIKit.TITLE_FONT, c2, label, HORIZONTAL_ALIGNMENT_LEFT, -1, 20, Color(0.7, 0.92, 1.0) if ready else UIKit.PAPER)
 		if n > 0:
 			var s := "x%d" % n
 			var sw := UIKit.TITLE_FONT.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, 30).x

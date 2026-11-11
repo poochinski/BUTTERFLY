@@ -58,7 +58,7 @@ func _ready() -> void:
 	model.team = team
 	add_child(model)
 	if not weapons.is_empty():
-		model.set_weapon(weapon().id)
+		model.set_weapon(weapon().id, weapon().att)
 
 
 func setup(t: int, nm: String, cls: int) -> void:
@@ -69,12 +69,20 @@ func setup(t: int, nm: String, cls: int) -> void:
 
 
 func _build_loadout() -> void:
-	var c: Dictionary = WeaponDB.CLASSES[class_index]
-	weapons = [Weapon.new(c["primary"]), Weapon.new(c["secondary"])]
+	var c: Dictionary
+	if self is Player:
+		c = Game.loadout(class_index)
+	else:
+		var pool: Array = WeaponDB.CLASSES + WeaponDB.BOT_CLASSES
+		c = (pool[class_index % pool.size()] as Dictionary).duplicate()
+		var opts: Array = WeaponDB.ATTACHMENTS.get(c["primary"], [])
+		if not opts.is_empty() and randf() < 0.7:
+			c["p_att"] = opts[randi() % opts.size()][0]
+	weapons = [Weapon.new(c["primary"], String(c.get("p_att", ""))), Weapon.new(c["secondary"], String(c.get("s_att", "")))]
 	current = 0
 	frags = 2
 	if model:
-		model.set_weapon(weapon().id)
+		model.set_weapon(weapon().id, weapon().att)
 
 
 func team_color() -> Color:
@@ -149,7 +157,7 @@ func switch_weapon(index: int) -> bool:
 	weapon().cancel_reload()
 	current = index
 	if model:
-		model.set_weapon(weapon().id)
+		model.set_weapon(weapon().id, weapon().att)
 	return true
 
 
@@ -175,7 +183,8 @@ func fire_weapon(origin: Vector3, dir: Vector3, spread_deg: float, muzzle: Node3
 	w.consume()
 	_spawn_protect = 0.0
 	var res := Combat.fire(self, origin, dir, w, spread_deg, muzzle)
-	Sfx.play_3d(String(w.data["sound"]), origin, 0.0 if self is Player else -2.0)
+	var vol := (0.0 if self is Player else -2.0) - (16.0 if bool(w.data.get("suppressed", false)) else 0.0)
+	Sfx.play_3d(String(w.data["sound"]), origin, vol)
 	fired.emit(self)
 	if model:
 		model.kick()

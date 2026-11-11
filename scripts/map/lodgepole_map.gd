@@ -57,6 +57,7 @@ func build() -> void:
 	title = "Lodgepole"
 	orbit = Vector4(-4, 0, 62, 50)
 	orbit_height = 26.0
+	heli_height = 30.0
 	rng.seed = 2009
 	_noise.seed = 11
 	_noise.frequency = 0.028
@@ -730,7 +731,7 @@ func _clear_spot(x: float, z: float) -> bool:
 
 func _forest_and_rocks() -> void:
 	var trunk_m := Craft.mat(Craft.Kind.CARDBOARD, Color(0.36, 0.26, 0.18), Craft.Pattern.BANDS, Color(0.3, 0.21, 0.14), 3.0, 0.0, false)
-	var needles := [Craft.mat(Craft.Kind.FELT, Color(0.16, 0.25, 0.15), 0, Color.WHITE, 1.0, 0.0, false), Craft.mat(Craft.Kind.FELT, Color(0.2, 0.3, 0.17), 0, Color.WHITE, 1.0, 0.0, false), Craft.mat(Craft.Kind.FELT, Color(0.14, 0.22, 0.15), 0, Color.WHITE, 1.0, 0.0, false)]
+	var needles := [Craft.mat(Craft.Kind.FELT, Color(0.13, 0.21, 0.13), 0, Color.WHITE, 1.0, 0.0, false), Craft.mat(Craft.Kind.FELT, Color(0.17, 0.26, 0.15), 0, Color.WHITE, 1.0, 0.0, false), Craft.mat(Craft.Kind.FELT, Color(0.12, 0.19, 0.14), 0, Color.WHITE, 1.0, 0.0, false)]
 	var trunks := []
 	var cones := [[], [], []]
 	var placed := {}
@@ -760,12 +761,12 @@ func _forest_and_rocks() -> void:
 		var r := h * 0.024
 		trunks.append(Transform3D(Basis().scaled(Vector3(r, h * 0.55, r)), Vector3(x, y + h * 0.27, z)))
 		var shade := rng.randi() % 3
-		var spread := h * rng.randf_range(0.26, 0.32)
-		for t in 5:
-			var cr := spread * (1.0 - t * 0.17)
+		var spread := h * rng.randf_range(0.21, 0.27)
+		for t in 6:
+			var cr := spread * (1.0 - t * 0.15)
 			var ch := h * 0.26
 			var yaw := rng.randf() * TAU
-			cones[shade].append(Transform3D(Basis.from_euler(Vector3(0, yaw, 0)).scaled(Vector3(cr, ch, cr)), Vector3(x, y + h * (0.32 + t * 0.14), z)))
+			cones[shade].append(Transform3D(Basis.from_euler(Vector3(0, yaw, 0)).scaled(Vector3(cr, ch, cr)), Vector3(x, y + h * (0.3 + t * 0.12), z)))
 		if in_bounds:
 			inside += 1
 			var body := StaticBody3D.new()

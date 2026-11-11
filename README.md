@@ -39,7 +39,9 @@ or the higher score after 10 minutes. You choose the bots' skill
 | Pick up weapon (hold) | F | X (hold) |
 | Knife | V or E | R3 |
 | Frag grenade (hold to cook) | G | RB |
-| Killstreak (UAV) | 5 | D-pad up |
+| Killstreak: UAV (3 kills) | 5 | D-pad up |
+| Killstreak: Attack helicopter (5 kills) | 6 | D-pad right |
+| Killstreak: Attack dogs (7 kills) | 7 | D-pad left |
 | Scoreboard | Tab | Back |
 | Pause | Esc | Start |
 
@@ -54,9 +56,12 @@ nearest enemy when you aim down sights.
   spread that grows when moving or jumping, aim down sights, recoil you pull
   against, reloads (empty reloads are slower), weapon swaps, knife lunge,
   cookable frags, and health regeneration.
-- **Weapons:** M4A1, AK-47, PDW-9 SMG, Longbow .50 sniper (with scope),
-  Pump-12 shotgun and M9 pistol, in 4 classes: Assault, Raider, Rusher
-  and Marksman.
+- **Weapons:**
+  - M4A1, AK-47, PDW-9 SMG, Longbow .50 sniper (with scope), Pump-12
+    shotgun and M9 pistol.
+  - New: M249 SAW light machine gun, Mk 14 EBR marksman rifle and
+    .44 Magnum revolver.
+  - Four default classes plus five custom slots (see below).
 - **Bots:** they see with a field of view and line of sight, hear gunfire,
   path across the navmesh, strafe and crouch in fights, aim with human-like
   reaction time and error, fire in bursts, reload, knife, and throw frags.
@@ -72,6 +77,40 @@ nearest enemy when you aim down sights.
   - The **terminal → jet bridge → walk-through airliner → rear stair truck**
     (middle).
   - The **open apron** with a business jet (south).
+
+## Progression, Create-a-Class and kill streaks
+
+- **Levels 1–30.** Rank titles run from Private I to Colonel III. Every
+  level-up gets a banner listing any guns it unlocks.
+- **Guns unlock by level:**
+  - level 1: M4A1, PDW-9 and M9
+  - level 2: Pump-12
+  - level 4: AK-47
+  - level 6: .44 Magnum
+  - level 8: Longbow .50
+  - level 10: M249 SAW
+  - level 13: Mk 14 EBR
+- **Attachments unlock by kills with that gun.** Choose from red dot,
+  holographic sight, ACOG (4x), suppressor, foregrip and extended mags.
+  - Without an optic, rifles use flip-up iron sights.
+  - A suppressor keeps you off the enemy radar when firing and quietens
+    your shots.
+  - A foregrip cuts recoil.
+  - Extended mags hold more rounds.
+- **Create-a-Class** (main menu) has five custom slots. Each takes a
+  primary and a secondary with one attachment each. The four default
+  classes are always available too.
+- **Kill streaks:**
+  - **3, UAV:** the paper plane shows enemies on the radar.
+  - **5, Attack helicopter:** a papercraft gunship circles the map for 40
+    seconds and shoots any enemy it can see.
+  - **7, Attack dogs:** ten felt shepherds, three on the ground at a time.
+    Each fallen dog is replaced until all ten are gone or 40 seconds
+    pass. Dogs can be shot, and killing one is worth XP.
+  - Bots call their streaks in too.
+- **Damage direction:** when you're hit, red bleeds in from the side the
+  shots came from, and a red arc around the crosshair points at the
+  shooter. Both keep tracking as you turn.
 
 ## Map: Lodgepole
 
@@ -203,8 +242,9 @@ shaders/           craft materials, ink outlines, cellophane, sky
 ## Roadmap
 
 - [x] **M1:** map, movement, gunplay, 6 weapons, bots, TDM, UAV, HUD, menu
-- [ ] **M2:** more killstreaks (care package, paper airstrike, chopper),
-      perks, attachments, create-a-class
+- [x] **M2 (part):** attack helicopter and dog killstreaks, attachments,
+      Create-a-Class, 30 levels
+- [ ] **M2 (rest):** perks, care package, airstrike
 - [ ] **M3:** more maps (Lodgepole done) and Domination / FFA modes
 - [ ] **M4:** music, more sound polish, killcam replay, flash and stun
       grenades

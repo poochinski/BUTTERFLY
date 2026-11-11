@@ -74,13 +74,13 @@ func _ready() -> void:
 	add_child(frag)
 
 
-func set_weapon(id: String, color: Color) -> void:
+func set_weapon(id: String, color: Color, att := "") -> void:
 	weapon_id = id
 	team_color = color
 	_model = String(WeaponDB.get_data(id)["model"])
 	for c in _holder.get_children():
 		c.queue_free()
-	gun = GunBuilder.build(id, true, color)
+	gun = GunBuilder.build(id, true, color, att)
 	_holder.add_child(gun)
 	_mag = gun.get_meta("mag")
 	_mag_rest = _mag.position
@@ -252,7 +252,7 @@ func fired(now_empty: bool) -> void:
 		"sniper":
 			if not now_empty:
 				_bolt_t = 0.0
-		"shotgun":
+		"shotgun", "revolver":
 			pass
 		_:
 			_eject_brass(0.0)
@@ -352,6 +352,17 @@ func _reload_keys() -> Array:
 		k.append([0.92, Vector3.ZERO, Vector3.ZERO, ""])
 		k.append([1.0, Vector3.ZERO, Vector3.ZERO, ""])
 		return k
+	if _model == "revolver":
+		# Swing the cylinder out, dump the empties, speed-load, snap shut.
+		var out := Vector3(-0.04, 0.0, 0.0)
+		k.append([0.0, Vector3.ZERO, Vector3.ZERO, ""])
+		k.append([0.14, Vector3(0.0, 0.05, -0.03), out, ""])
+		k.append([0.24, Vector3(0.0, 0.05, -0.03), out, "dump"])
+		k.append([0.44, OFFSCREEN, out, ""])
+		k.append([0.66, Vector3(-0.03, 0.03, -0.06), out, "slap"])
+		k.append([0.8, Vector3(0.0, 0.05, -0.03), Vector3.ZERO, ""])
+		k.append([1.0, Vector3.ZERO, Vector3.ZERO, ""])
+		return k
 	var pistol := _model == "pistol"
 	k.append([0.0, Vector3.ZERO, Vector3.ZERO, ""])
 	if pistol:
@@ -428,6 +439,12 @@ func _animate_reload(delta: float) -> Vector3:
 					_dropped = true
 					_mag.visible = false
 					Fx.dropped_mag(_mag)
+			"dump":
+				if not _dropped:
+					_dropped = true
+					var down := Basis(Vector3.RIGHT, -PI * 0.5) * _mag.global_transform.basis.orthonormalized()
+					for _n in 6:
+						Fx.casing(_mag.global_position + Vector3(0, 0.06, 0), down, 1)
 			"slap":
 				if not _slapped:
 					_slapped = true
@@ -454,7 +471,7 @@ func _animate_reload(delta: float) -> Vector3:
 	var tilt := smoothstep(0.0, 0.12, r) * (1.0 - smoothstep(0.86, 1.0, r))
 	if _model == "shotgun":
 		extra += Vector3(0.15, -0.2, -0.45) * tilt
-	elif _model == "pistol":
+	elif _model == "pistol" or _model == "revolver":
 		extra += Vector3(0.2, 0.15, 0.25) * tilt
 	else:
 		extra += Vector3(0.18, 0.22, 0.5) * tilt

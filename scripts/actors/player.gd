@@ -18,6 +18,8 @@ const GRAVITY := 18.0
 const JUMP_V := 6.0
 const ACCEL := 50.0
 const AIR_ACCEL := 7.0
+## Stopping is snappier than starting, as in classic shooters.
+const DECEL := 70.0
 const SPRINT_TIME := 4.0
 const VM_FOV := 60.0
 
@@ -70,14 +72,14 @@ func _ready() -> void:
 	vm = Viewmodel.new()
 	camera.add_child(vm)
 	if not weapons.is_empty():
-		vm.set_weapon(weapon().id, team_color())
+		vm.set_weapon(weapon().id, team_color(), weapon().att)
 	model.set_shadow_only(true)
 
 
 func _build_loadout() -> void:
 	super._build_loadout()
 	if vm:
-		vm.set_weapon(weapon().id, team_color())
+		vm.set_weapon(weapon().id, team_color(), weapon().att)
 
 
 func respawn(at: Transform3D) -> void:
@@ -97,6 +99,8 @@ func respawn(at: Transform3D) -> void:
 	camera.make_current()
 	model.set_shadow_only(true)
 	vm.visible = true
+	# Bring the gun up into view on spawn.
+	vm._swap = 1.0
 	vm.raise()
 
 
@@ -225,6 +229,8 @@ func _handle_movement(delta: float, locked: bool) -> void:
 	var target := wish * speed
 	var hv := Vector3(velocity.x, 0, velocity.z)
 	var acc := ACCEL if is_on_floor() else AIR_ACCEL
+	if is_on_floor() and target.length() < hv.length() - 0.05:
+		acc = DECEL
 	hv = hv.move_toward(target, acc * delta)
 	velocity.x = hv.x
 	velocity.z = hv.z
@@ -247,6 +253,7 @@ func _handle_movement(delta: float, locked: bool) -> void:
 
 	if is_on_floor() and not _was_on_floor:
 		vm.land(_fall_speed / 10.0)
+		_land_dip = clampf(_fall_speed / 10.0, 0.0, 1.0) * 0.14
 		if _fall_speed > 11.0:
 			take_damage((_fall_speed - 11.0) * 9.0, self, "fall", false, Vector3.DOWN)
 		if _fall_speed > 3.0:
@@ -330,7 +337,7 @@ func _handle_weapons(delta: float, locked: bool) -> void:
 		_swap_t += delta
 		if _swap_t > 0.28 and current != _swap_pending:
 			switch_weapon(_swap_pending)
-			vm.set_weapon(weapon().id, team_color())
+			vm.set_weapon(weapon().id, team_color(), weapon().att)
 			vm.lower()
 			vm._swap = 1.0
 			vm.raise()
@@ -482,16 +489,16 @@ func _swap_to_pickup(pk: WeaponPickup) -> void:
 	var drop := WeaponPickup.new()
 	get_parent().add_child(drop)
 	drop.setup(old.id, old.mag, old.reserve, global_position + (-global_transform.basis.z) * 0.6, team)
-	var nw := Weapon.new(pk.weapon_id)
+	var nw := Weapon.new(pk.weapon_id, pk.att)
 	nw.mag = pk.mag
 	nw.reserve = pk.reserve
 	weapons[current] = nw
 	pk.queue_free()
 	near_pickup = null
 	if model:
-		model.set_weapon(nw.id)
+		model.set_weapon(nw.id, nw.att)
 	vm.cancel_reload()
-	vm.set_weapon(nw.id, team_color())
+	vm.set_weapon(nw.id, team_color(), nw.att)
 	vm._swap = 1.0
 	vm.raise()
 	ads = 0.0
@@ -519,14 +526,27 @@ func _fire_once(w: Weapon) -> void:
 		Sfx.play_3d("pump", global_position, -6.0)
 
 
+var _cam_bob := 0.0
+var _land_dip := 0.0
+
+
 func _update_camera(delta: float) -> void:
 	_eye = lerpf(_eye, eye_height(), 1.0 - exp(-12.0 * delta))
-	head_pivot.position.y = _eye
+	# A gentle head bob while moving (settles when aiming) and a dip on
+	# landing that springs back.
+	var hs0 := Vector2(velocity.x, velocity.z).length()
+	if is_on_floor():
+		_cam_bob += delta * hs0 * (1.05 if sprinting else 1.2)
+	var bob_amt := clampf(hs0 / WALK, 0.0, 1.6) * (1.0 - ads * 0.85) * (1.0 if is_on_floor() else 0.0)
+	var bob_y := (absf(sin(_cam_bob * PI)) - 0.5) * 0.03 * bob_amt
+	var bob_x := sin(_cam_bob * PI) * 0.014 * bob_amt
+	_land_dip = lerpf(_land_dip, 0.0, 1.0 - exp(-7.0 * delta))
+	head_pivot.position = Vector3(bob_x, _eye + bob_y - _land_dip, head_pivot.position.z)
 	_recoil_vis = move_toward(_recoil_vis, 0.0, delta * 0.4)
 	head_pivot.rotation.x = aim_pitch + _recoil_vis
 	# Sprinting gently tilts the view; strafing leans it a touch.
 	var side := Vector3(velocity.x, 0, velocity.z).dot(global_transform.basis.x)
-	head_pivot.rotation.z = lerpf(head_pivot.rotation.z, -side * 0.006, minf(delta * 8.0, 1.0))
+	head_pivot.rotation.z = lerpf(head_pivot.rotation.z, -side * 0.006 + sin(_cam_bob * PI) * 0.004 * bob_amt, minf(delta * 8.0, 1.0))
 	var w := weapon().data
 	var base := Game.fov()
 	var target_fov := lerpf(base, float(w["ads_fov"]), ads)

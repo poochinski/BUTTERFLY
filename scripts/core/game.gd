@@ -11,11 +11,11 @@ const SAVE_PATH := "user://papercut_profile.json"
 const TEAM_NAMES := ["Task Force Cardstock", "Corrugated Militia"]
 const TEAM_SHORT := ["CARDSTOCK", "MILITIA"]
 const TEAM_COLORS := [Color(0.2, 0.28, 0.44), Color(0.6, 0.25, 0.18)]
-const RANKS := [
-	["Recruit", 0], ["Private", 800], ["Private First Class", 2000], ["Corporal", 4000],
-	["Sergeant", 7000], ["Staff Sergeant", 11000], ["Lieutenant", 16000], ["Captain", 23000],
-	["Major", 32000], ["Colonel", 44000], ["Commander", 60000],
-]
+## 30 levels. Each band of three levels shares a rank title (I, II, III).
+const MAX_LEVEL := 30
+const RANK_TITLES := ["Private", "Private First Class", "Specialist", "Corporal", "Sergeant",
+	"Staff Sergeant", "Lieutenant", "Captain", "Major", "Colonel"]
+const CUSTOM_SLOTS := 5
 const BOT_NAMES := ["Origami", "Glue Stick", "Thimble", "Staples", "Crayon", "Doily", "Pom-Pom",
 	"Bookmark", "Ribbon", "Scissors", "Tassel", "Pinecone", "Sequin", "Buttons", "Washi", "Felt Tip"]
 const DIFFICULTIES := ["Recruit", "Regular", "Hardened", "Veteran"]
@@ -38,7 +38,7 @@ const MAPS := [
 	{"id": "gateway", "name": "Gateway", "desc": "papercraft airport"},
 	{"id": "lodgepole", "name": "Lodgepole", "desc": "hillside forest lodge"},
 ]
-var profile := {"xp": 0, "kills": 0, "deaths": 0, "wins": 0, "matches": 0}
+var profile := {"xp": 0, "kills": 0, "deaths": 0, "wins": 0, "matches": 0, "weapon_kills": {}, "classes": []}
 
 
 func _ready() -> void:
@@ -73,15 +73,82 @@ func _input(event: InputEvent) -> void:
 		input_mode_changed.emit(mode)
 
 
+## Total XP needed to reach a level (level 1 needs 0).
+func xp_for_level(level: int) -> int:
+	var total := 0
+	for l in range(2, level + 1):
+		total += 600 + (l - 2) * 150
+	return total
+
+
 func rank_for(xp: int) -> Dictionary:
-	var idx := 0
-	for i in RANKS.size():
-		if xp >= int(RANKS[i][1]):
-			idx = i
-	var next_xp := int(RANKS[mini(idx + 1, RANKS.size() - 1)][1])
-	var cur_xp := int(RANKS[idx][1])
-	return {"index": idx, "name": RANKS[idx][0], "cur": cur_xp, "next": next_xp,
+	var level := 1
+	while level < MAX_LEVEL and xp >= xp_for_level(level + 1):
+		level += 1
+	var cur_xp := xp_for_level(level)
+	var next_xp := xp_for_level(mini(level + 1, MAX_LEVEL))
+	var title: String = RANK_TITLES[mini((level - 1) / 3, RANK_TITLES.size() - 1)] + " " + ["I", "II", "III"][(level - 1) % 3]
+	return {"index": level - 1, "level": level, "name": title, "cur": cur_xp, "next": next_xp,
 		"progress": 1.0 if next_xp == cur_xp else float(xp - cur_xp) / float(next_xp - cur_xp)}
+
+
+func level() -> int:
+	return int(rank_for(int(profile["xp"]))["level"])
+
+
+func weapon_unlocked(id: String) -> bool:
+	return level() >= int(WeaponDB.UNLOCK_LEVEL.get(id, 1))
+
+
+func weapon_kills(id: String) -> int:
+	return int((profile["weapon_kills"] as Dictionary).get(id, 0))
+
+
+func attachment_unlocked(id: String, att: String) -> bool:
+	return att == "" or weapon_kills(id) >= WeaponDB.attachment_kills(id, att)
+
+
+## Custom classes live in the profile; start them as copies of the
+## default classes.
+func custom_classes() -> Array:
+	var list: Array = profile["classes"]
+	while list.size() < CUSTOM_SLOTS:
+		list.append({"name": "Custom %d" % (list.size() + 1), "primary": "m4", "p_att": "", "secondary": "pistol", "s_att": ""})
+	return list
+
+
+## Every class the player can pick: the defaults, then the custom slots.
+func class_count() -> int:
+	return WeaponDB.CLASSES.size() + CUSTOM_SLOTS
+
+
+func loadout(index: int) -> Dictionary:
+	if index < WeaponDB.CLASSES.size():
+		return WeaponDB.CLASSES[index]
+	var c: Dictionary = custom_classes()[clampi(index - WeaponDB.CLASSES.size(), 0, CUSTOM_SLOTS - 1)]
+	# Anything not unlocked (an old save, say) falls back to the starters.
+	var out := c.duplicate()
+	if not weapon_unlocked(String(out["primary"])):
+		out["primary"] = "m4"
+		out["p_att"] = ""
+	if not weapon_unlocked(String(out["secondary"])):
+		out["secondary"] = "pistol"
+		out["s_att"] = ""
+	if not attachment_unlocked(String(out["primary"]), String(out["p_att"])):
+		out["p_att"] = ""
+	if not attachment_unlocked(String(out["secondary"]), String(out["s_att"])):
+		out["s_att"] = ""
+	return out
+
+
+func describe(c: Dictionary) -> String:
+	var p := String(WeaponDB.DATA[c["primary"]]["name"])
+	if String(c.get("p_att", "")) != "":
+		p += " + " + String(WeaponDB.ATTACH[c["p_att"]])
+	var s := String(WeaponDB.DATA[c["secondary"]]["name"])
+	if String(c.get("s_att", "")) != "":
+		s += " + " + String(WeaponDB.ATTACH[c["s_att"]])
+	return p + "   |   " + s
 
 
 func add_xp(amount: int) -> bool:

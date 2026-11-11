@@ -22,6 +22,13 @@ const TIME_LIMIT := 600.0
 const RESPAWN_BOT := 3.0
 const RESPAWN_PLAYER := 4.0
 const UAV_KILLS := 3
+const HELI_KILLS := 5
+const DOG_KILLS := 7
+const DOG_TOTAL := 10
+const DOG_AT_ONCE := 3
+const DOG_TIME := 40.0
+## Kill streaks in order: id, kills needed, name.
+const STREAKS := [["uav", 3, "UAV"], ["heli", 5, "ATTACK HELI"], ["dogs", 7, "DOGS"]]
 const UAV_TIME := 30.0
 const TEAM_SIZE := 6
 
@@ -34,6 +41,9 @@ var ended := false
 var winner := -1
 var uav_time := [0.0, 0.0]
 var uav_ready := false
+## The player's earned, unused streaks: id -> true.
+var streaks_ready := {}
+var _packs: Array = []
 var last_fired := {}  # Soldier -> time
 var killed_by: Soldier
 var respawn_left := 0.0
@@ -68,7 +78,7 @@ func start(m: GameMap) -> void:
 			else:
 				var b := Bot.new()
 				b.name = "Bot_%d_%d" % [t, i]
-				b.setup(t, names[name_i % names.size()], randi() % WeaponDB.CLASSES.size())
+				b.setup(t, names[name_i % names.size()], randi() % (WeaponDB.CLASSES.size() + WeaponDB.BOT_CLASSES.size()))
 				name_i += 1
 				s = b
 			add_child(s)
@@ -119,8 +129,18 @@ func _physics_process(delta: float) -> void:
 	_update_uav_plane(delta)
 	if player and not player.alive and killed_by and is_instance_valid(killed_by):
 		_death_cam(delta)
-	if player and player.alive and uav_ready and Input.is_action_just_pressed("killstreak") and not player.input_locked:
-		_call_uav(0, player)
+	_update_dogs(delta)
+	if player and player.alive and not player.input_locked:
+		if streaks_ready.has("uav") and Input.is_action_just_pressed("killstreak"):
+			streaks_ready.erase("uav")
+			uav_ready = false
+			_call_uav(0, player)
+		if streaks_ready.has("heli") and Input.is_action_just_pressed("killstreak2"):
+			streaks_ready.erase("heli")
+			_call_heli(0, player)
+		if streaks_ready.has("dogs") and Input.is_action_just_pressed("killstreak3"):
+			streaks_ready.erase("dogs")
+			_call_dogs(0, player)
 
 
 ## Chooses where to respawn: far from living enemies, close to friends,
@@ -163,9 +183,12 @@ func pick_spawn(team: int) -> Transform3D:
 
 
 func _on_fired(s: Soldier) -> void:
-	last_fired[s] = clock
+	# Suppressed shots don't show on the enemy radar and only carry a short way.
+	var quiet := bool(s.weapon().data.get("suppressed", false))
+	if not quiet:
+		last_fired[s] = clock
 	for o in soldiers:
-		if o is Bot and o.team != s.team:
+		if o is Bot and o.team != s.team and (not quiet or o.global_position.distance_to(s.global_position) < 15.0):
 			(o as Bot).hear(s.global_position, s)
 
 
@@ -183,11 +206,17 @@ func _on_died(victim: Soldier, killer: Soldier, weapon_id: String, headshot: boo
 		if killer == player:
 			xp_event.emit(100, "Enemy down")
 			Game.profile["kills"] = int(Game.profile["kills"]) + 1
+			_count_weapon_kill(weapon_id)
 			_award(100)
 			_player_medals(victim, weapon_id, headshot)
 			_streak_banner(killer.streak)
-		elif killer is Bot and killer.streak == UAV_KILLS:
-			_call_uav(killer.team, killer)
+		elif killer is Bot:
+			if killer.streak == UAV_KILLS:
+				_call_uav(killer.team, killer)
+			elif killer.streak == HELI_KILLS:
+				_call_heli(killer.team, killer)
+			elif killer.streak == DOG_KILLS:
+				_call_dogs(killer.team, killer)
 	for a in victim.attackers.keys():
 		var att: Soldier = a
 		if att != killer and is_instance_valid(att) and att.team != victim.team:
@@ -253,14 +282,19 @@ func _player_medals(victim: Soldier, weapon_id: String, headshot: bool) -> void:
 func _streak_banner(n: int) -> void:
 	var titles := {
 		3: ["3 KILL STREAK", "UAV READY  —  press 5 / D-pad Up"],
-		5: ["5 KILL STREAK", "You're on a roll"],
-		7: ["7 KILL STREAK", "A cut above the rest"],
+		5: ["5 KILL STREAK", "ATTACK HELICOPTER READY  —  press 6 / D-pad Right"],
+		7: ["7 KILL STREAK", "ATTACK DOGS READY  —  press 7 / D-pad Left"],
 		10: ["10 KILL STREAK", "UNSTOPPABLE"],
 		15: ["15 KILL STREAK", "ORIGAMI LEGEND"],
 		20: ["20 KILL STREAK", "THE WHOLE CRAFT BOX"],
 	}
 	if n == UAV_KILLS:
 		uav_ready = true
+		streaks_ready["uav"] = true
+	elif n == HELI_KILLS:
+		streaks_ready["heli"] = true
+	elif n == DOG_KILLS:
+		streaks_ready["dogs"] = true
 	if titles.has(n):
 		var t: Array = titles[n]
 		banner.emit(t[0], t[1], Color(1.0, 0.82, 0.25) if n < 10 else Color(1.0, 0.45, 0.35))
@@ -278,17 +312,38 @@ func _drop_weapon(victim: Soldier) -> void:
 		return
 	var p := WeaponPickup.new()
 	add_child(p)
-	p.setup(w.id, w.mag, w.reserve, victim.global_position, victim.team)
+	p.setup(w.id, w.mag, w.reserve, victim.global_position, victim.team, w.att)
 	var all := get_tree().get_nodes_in_group("pickups")
 	if all.size() > 14:
 		all[0].queue_free()
+
+
+## Weapon kills unlock attachments for that gun.
+func _count_weapon_kill(weapon_id: String) -> void:
+	if not WeaponDB.DATA.has(weapon_id):
+		return
+	var wk: Dictionary = Game.profile["weapon_kills"]
+	var n := int(wk.get(weapon_id, 0)) + 1
+	wk[weapon_id] = n
+	for a: Array in WeaponDB.ATTACHMENTS.get(weapon_id, []):
+		if int(a[1]) == n:
+			medal.emit("UNLOCKED: %s" % String(WeaponDB.ATTACH[a[0]]).to_upper(), 0)
+			message.emit("%s unlocked for the %s" % [WeaponDB.ATTACH[a[0]], WeaponDB.DATA[weapon_id]["name"]], Color(0.7, 0.92, 1.0))
 
 
 func _award(xp: int) -> void:
 	if Game.add_xp(xp):
 		var r := Game.rank_for(int(Game.profile["xp"]))
 		Sfx.play_ui("rank_up")
-		message.emit("PROMOTED: %s" % r["name"], Color(1, 0.85, 0.3))
+		var lvl := int(r["level"])
+		var unlocked := []
+		for id in WeaponDB.UNLOCK_LEVEL:
+			if int(WeaponDB.UNLOCK_LEVEL[id]) == lvl:
+				unlocked.append(String(WeaponDB.DATA[id]["name"]))
+		var sub := "Level %d  —  %s" % [lvl, r["name"]]
+		if not unlocked.is_empty():
+			sub += "   ·   New: " + ", ".join(unlocked)
+		banner.emit("LEVEL UP!", sub, Color(0.55, 0.85, 1.0))
 
 
 func _death_cam(delta: float) -> void:
@@ -314,6 +369,75 @@ func _call_uav(team: int, by: Soldier) -> void:
 		message.emit("ENEMY UAV ONLINE", Color(1.0, 0.45, 0.4))
 	Sfx.play_3d("plane", Vector3(10, 30, 0), 4.0)
 	uav_changed.emit()
+
+
+## 5 kills: an attack helicopter circles for 40 seconds.
+func _call_heli(team: int, by: Soldier) -> void:
+	var h := AttackHeli.new()
+	add_child(h)
+	h.setup(self, by, team)
+	if by == player:
+		Sfx.play_ui("streak_use")
+		message.emit("ATTACK HELICOPTER INBOUND", Color(0.6, 0.85, 1.0))
+	elif team == 0:
+		message.emit("Friendly attack helicopter inbound", Color(0.6, 0.85, 1.0))
+	else:
+		message.emit("ENEMY ATTACK HELICOPTER INBOUND", Color(1.0, 0.45, 0.4))
+
+
+## 7 kills: a pack of ten attack dogs, three on the ground at a time, each
+## fallen dog replaced until all ten are spent or 40 seconds pass.
+func _call_dogs(team: int, by: Soldier) -> void:
+	_packs.append({"team": team, "by": by, "released": 0, "alive": [], "t": 0.0})
+	if by == player:
+		Sfx.play_ui("streak_use")
+		message.emit("ATTACK DOGS RELEASED", Color(0.6, 0.85, 1.0))
+	elif team == 0:
+		message.emit("Friendly dogs released", Color(0.6, 0.85, 1.0))
+	else:
+		message.emit("ENEMY DOGS INCOMING", Color(1.0, 0.45, 0.4))
+
+
+func _update_dogs(delta: float) -> void:
+	for pack: Dictionary in _packs.duplicate():
+		pack["t"] = float(pack["t"]) + delta
+		var alive: Array = (pack["alive"] as Array).filter(func(d): return is_instance_valid(d) and d.alive)
+		pack["alive"] = alive
+		if float(pack["t"]) >= DOG_TIME:
+			for d in alive:
+				d.queue_free()
+			_packs.erase(pack)
+			if int(pack["team"]) == 0:
+				message.emit("Dogs called off", Color(0.85, 0.9, 1.0))
+			continue
+		while alive.size() < DOG_AT_ONCE and int(pack["released"]) < DOG_TOTAL:
+			alive.append(_release_dog(pack))
+			pack["released"] = int(pack["released"]) + 1
+		if alive.is_empty() and int(pack["released"]) >= DOG_TOTAL:
+			_packs.erase(pack)
+
+
+func _release_dog(pack: Dictionary) -> AttackDog:
+	var team := int(pack["team"])
+	var d := AttackDog.new()
+	d.team = team
+	d.handler = pack["by"]
+	d.match_ref = self
+	var list: Array = map.spawns[team]
+	var t: Transform3D = list[randi() % list.size()]
+	add_child(d)
+	d.global_position = t.origin + Vector3(randf_range(-1.5, 1.5), 0.3, randf_range(-1.5, 1.5))
+	Sfx.play_3d("bark", d.global_position, 4.0)
+	return d
+
+
+## How many dogs a team has on the ground (for the HUD).
+func dogs_out(team: int) -> int:
+	var n := 0
+	for pack: Dictionary in _packs:
+		if int(pack["team"]) == team:
+			n += (pack["alive"] as Array).size()
+	return n
 
 
 func uav_active(team: int) -> bool:

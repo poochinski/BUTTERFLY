@@ -13,6 +13,7 @@ var _settings: SettingsPanel
 var _class_btn: Button
 var _diff_btn: Button
 var _map_btn: Button
+var _cac: ClassEditor
 var _map_l: Label
 var _class_desc: Label
 var _rank_l: Label
@@ -61,6 +62,7 @@ func _ready() -> void:
 	_main.add_child(_map_btn)
 	_diff_btn = UIKit.button("", _cycle_difficulty)
 	_main.add_child(_diff_btn)
+	_main.add_child(UIKit.button("CREATE-A-CLASS", _open_cac))
 	_main.add_child(UIKit.button("SETTINGS", _open_settings))
 	_main.add_child(UIKit.button("QUIT", func(): quit_pressed.emit()))
 
@@ -96,6 +98,12 @@ func _ready() -> void:
 	hint.position = Vector2(90, -60)
 	_root.add_child(hint)
 
+	_cac = ClassEditor.new()
+	_cac.visible = false
+	_cac.position = Vector2(90, 300)
+	_cac.closed.connect(_close_settings)
+	_root.add_child(_cac)
+
 	_settings = SettingsPanel.new()
 	_settings.visible = false
 	_settings.position = Vector2(90, 330)
@@ -105,15 +113,16 @@ func _ready() -> void:
 
 
 func refresh() -> void:
-	var c: Dictionary = WeaponDB.CLASSES[int(Game.settings["class"])]
+	var ci := int(Game.settings["class"]) % Game.class_count()
+	var c := Game.loadout(ci)
 	_class_btn.text = "LOADOUT: " + String(c["name"]).to_upper()
-	_class_desc.text = c["desc"]
+	_class_desc.text = Game.describe(c)
 	var md := _map_def()
 	_map_btn.text = "MAP: " + String(md["name"]).to_upper()
 	_map_l.text = "MAP: %s — %s" % [String(md["name"]).to_upper(), md["desc"]]
 	_diff_btn.text = "BOTS: " + String(Game.DIFFICULTIES[int(Game.settings["bot_difficulty"])]).to_upper()
 	var r := Game.rank_for(int(Game.profile["xp"]))
-	_rank_l.text = "%s   (rank %d)" % [r["name"], int(r["index"]) + 1]
+	_rank_l.text = "LEVEL %d   ·   %s" % [int(r["level"]), r["name"]]
 	_xp_bar.value = float(r["progress"]) * 100.0
 	var k := int(Game.profile["kills"])
 	var d := maxi(int(Game.profile["deaths"]), 1)
@@ -128,7 +137,7 @@ func show_menu() -> void:
 
 
 func _cycle_class() -> void:
-	Game.settings["class"] = (int(Game.settings["class"]) + 1) % WeaponDB.CLASSES.size()
+	Game.settings["class"] = (int(Game.settings["class"]) + 1) % Game.class_count()
 	Game.save_profile()
 	refresh()
 
@@ -159,9 +168,119 @@ func _open_settings() -> void:
 	_settings.open()
 
 
+func _open_cac() -> void:
+	_main.visible = false
+	_cac.open()
+
+
 func _close_settings() -> void:
 	_main.visible = true
+	refresh()
 	_play.grab_focus()
+
+
+## Create-a-Class: five custom slots. Pick a primary and a secondary from
+## the guns your level has unlocked, and one attachment for each from those
+## your weapon kills have unlocked. Locked items show what unlocks them.
+class ClassEditor:
+	extends VBoxContainer
+	signal closed
+
+	var _slot := 0
+	var _slot_btn: Button
+	var _p_btn: Button
+	var _pa_btn: Button
+	var _s_btn: Button
+	var _sa_btn: Button
+	var _info: Label
+
+	func _ready() -> void:
+		custom_minimum_size = Vector2(620, 0)
+		add_theme_constant_override("separation", 10)
+		add_child(UIKit.label("CREATE-A-CLASS", 40, UIKit.ACCENT, true))
+		_slot_btn = UIKit.button("", func(): _slot = (_slot + 1) % Game.CUSTOM_SLOTS; _refresh())
+		add_child(_slot_btn)
+		_p_btn = UIKit.button("", func(): _cycle_gun("primary", "p_att", 0))
+		add_child(_p_btn)
+		_pa_btn = UIKit.button("", func(): _cycle_att("primary", "p_att"))
+		add_child(_pa_btn)
+		_s_btn = UIKit.button("", func(): _cycle_gun("secondary", "s_att", 1))
+		add_child(_s_btn)
+		_sa_btn = UIKit.button("", func(): _cycle_att("secondary", "s_att"))
+		add_child(_sa_btn)
+		_info = UIKit.label("", 19, UIKit.PAPER)
+		_info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		_info.custom_minimum_size = Vector2(600, 0)
+		add_child(_info)
+		add_child(UIKit.button("USE THIS CLASS", func():
+			Game.settings["class"] = WeaponDB.CLASSES.size() + _slot
+			_close()))
+		add_child(UIKit.button("BACK", _close))
+
+	func open() -> void:
+		visible = true
+		_refresh()
+		_slot_btn.grab_focus()
+
+	func _close() -> void:
+		Game.save_profile()
+		visible = false
+		closed.emit()
+
+	func _cls() -> Dictionary:
+		return Game.custom_classes()[_slot]
+
+	func _cycle_gun(key: String, att_key: String, slot: int) -> void:
+		var c := _cls()
+		var ids := []
+		for id in WeaponDB.DATA:
+			if int(WeaponDB.DATA[id]["slot"]) == slot and Game.weapon_unlocked(id):
+				ids.append(id)
+		var i := ids.find(c[key])
+		c[key] = ids[(i + 1) % ids.size()]
+		c[att_key] = ""
+		Sfx.play_ui("ui_click")
+		_refresh()
+
+	func _cycle_att(key: String, att_key: String) -> void:
+		var c := _cls()
+		var opts := [""]
+		for a: Array in WeaponDB.ATTACHMENTS.get(c[key], []):
+			if Game.attachment_unlocked(c[key], a[0]):
+				opts.append(a[0])
+		var i := opts.find(c[att_key])
+		c[att_key] = opts[(i + 1) % opts.size()]
+		Sfx.play_ui("ui_click")
+		_refresh()
+
+	func _att_name(att: String) -> String:
+		return "NONE (iron sights)" if att == "" else String(WeaponDB.ATTACH[att]).to_upper()
+
+	func _refresh() -> void:
+		var c := _cls()
+		_slot_btn.text = "SLOT: CUSTOM %d" % (_slot + 1)
+		_p_btn.text = "PRIMARY: " + String(WeaponDB.DATA[c["primary"]]["name"]).to_upper()
+		_pa_btn.text = "  ATTACHMENT: " + _att_name(String(c["p_att"]))
+		_s_btn.text = "SECONDARY: " + String(WeaponDB.DATA[c["secondary"]]["name"]).to_upper()
+		_sa_btn.text = "  ATTACHMENT: " + _att_name(String(c["s_att"]))
+		# What's still locked, and how to get it.
+		var lines := []
+		var lv := Game.level()
+		var locked := []
+		for id in WeaponDB.UNLOCK_LEVEL:
+			if int(WeaponDB.UNLOCK_LEVEL[id]) > lv:
+				locked.append("%s (level %d)" % [WeaponDB.DATA[id]["name"], WeaponDB.UNLOCK_LEVEL[id]])
+		if not locked.is_empty():
+			lines.append("Locked guns: " + ", ".join(locked))
+		for key: String in ["primary", "secondary"]:
+			var id := String(c[key])
+			var next := []
+			for a: Array in WeaponDB.ATTACHMENTS.get(id, []):
+				if not Game.attachment_unlocked(id, a[0]):
+					next.append("%s %d/%d kills" % [WeaponDB.ATTACH[a[0]], Game.weapon_kills(id), int(a[1])])
+			if not next.is_empty():
+				lines.append("%s: %s" % [WeaponDB.DATA[id]["name"], ", ".join(next)])
+		_info.text = "\n".join(lines) if not lines.is_empty() else "Everything unlocked for this class."
 
 
 class SettingsPanel:

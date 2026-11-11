@@ -204,12 +204,12 @@ func _build() -> void:
 		GunBuilder._bake(n, true)
 
 
-func set_weapon(id: String) -> void:
+func set_weapon(id: String, att := "") -> void:
 	if not _built:
 		_build()
 	if gun:
 		gun.queue_free()
-	gun = GunBuilder.build(id, false, Game.TEAM_COLORS[team])
+	gun = GunBuilder.build(id, false, Game.TEAM_COLORS[team], att)
 	gun_mount.add_child(gun)
 
 

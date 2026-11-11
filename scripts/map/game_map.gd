@@ -19,6 +19,8 @@ var title := "Map"
 ## Menu camera orbit: centre x, centre z, radius x, radius z.
 var orbit := Vector4(0, 0, 58, 46)
 var orbit_height := 22.0
+## Cruising height of the attack helicopter above y = 0.
+var heli_height := 24.0
 
 
 func build() -> void:

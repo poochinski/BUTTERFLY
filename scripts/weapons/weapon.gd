@@ -3,6 +3,7 @@ extends RefCounted
 ## Runtime state of one carried weapon: ammo, fire-rate timing, reloads.
 
 var id := ""
+var att := ""
 var data: Dictionary
 var mag := 0
 var reserve := 0
@@ -12,9 +13,10 @@ var reload_total := 0.0
 var trigger_released := true
 
 
-func _init(weapon_id: String) -> void:
+func _init(weapon_id: String, attachment := "") -> void:
 	id = weapon_id
-	data = WeaponDB.get_data(weapon_id)
+	att = attachment
+	data = WeaponDB.with_attachment(weapon_id, attachment)
 	refill()
 
 

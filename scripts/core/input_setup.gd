@@ -26,6 +26,8 @@ static func register() -> void:
 	_add("weapon_1", [_key(KEY_1)])
 	_add("weapon_2", [_key(KEY_2)])
 	_add("killstreak", [_key(KEY_5), _key(KEY_4), _joy(JOY_BUTTON_DPAD_UP)])
+	_add("killstreak2", [_key(KEY_6), _joy(JOY_BUTTON_DPAD_RIGHT)])
+	_add("killstreak3", [_key(KEY_7), _joy(JOY_BUTTON_DPAD_LEFT)])
 	_add("scoreboard", [_key(KEY_TAB), _joy(JOY_BUTTON_BACK)])
 	_add("pause", [_key(KEY_ESCAPE), _joy(JOY_BUTTON_START)])
 	_add("ui_accept", [_key(KEY_ENTER), _key(KEY_KP_ENTER), _key(KEY_SPACE), _joy(JOY_BUTTON_A)])
