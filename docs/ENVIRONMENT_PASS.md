@@ -44,3 +44,38 @@ construction paper, taped, tied with yarn and glued together.
 
 Code: `scripts/map/felt_ground.gd`, `scripts/map/handmade.gd`,
 `shaders/craft_body.gdshaderinc`.
+
+# Detail pass: how the airport works
+
+Small, believable systems, so the map reads as a working airport. Code:
+`scripts/map/airport_life.gd`.
+
+- [x] **A. Curbs, drains and covers.** Painted yellow-and-black curb
+      where the sidewalk meets airside, plain curbs round every lawn,
+      storm-drain grates (foil bars over a felt slot) along the terminal,
+      manhole and yellow fuel-hydrant pit lids on the apron.
+- [x] **B. Power and safety.** Junction boxes with warning stickers,
+      wired by yarn cables to each floodlight and the jet bridge. A felt
+      fire hydrant, felt-banded bollards at the entrance, fire extinguisher
+      cabinets, and wall lamps over the doors.
+- [x] **C. Airside signage.** Yellow/black taxiway signs on the lawns, a
+      stand guidance display ("PC 101 / STOP") and STAND 07 sign facing
+      the cockpit, a striped felt windsock, a FOD bin, and
+      no-smoking / ear-defender / airside-only signs.
+- [x] **D. Servicing the airliner.** Pleated paper bellows at the
+      aircraft door, the jet bridge rotunda and drive wheels, an open cargo
+      hold with bags riding the belt loader, a hydrant fuel cart under the
+      wing with its hose plugged in, a tow bar at the nose, and cones off
+      the wingtips, nose and tail.
+- [x] **E. Terminal systems.** A security checkpoint (x-ray tunnel,
+      roller beds, trays, detector arch), clocks on the pillars, glowing
+      exit signs, ceiling vents and sprinkler heads, CCTV cameras, hanging
+      wayfinding signs, floor arrows, a restrooms sign and a wet-floor
+      A-frame.
+- [x] **F. Baggage hall.** Dowel rollers at the belt ends, flight sort
+      signs, yellow felt safety lines, pallets of taped boxes.
+- [x] **G. Lived-in clutter.** Crumpled paper, coffee cups on seats and
+      floor (some knocked over), newspapers on gate seats, crashed paper
+      airplanes, drifts of confetti, tagged luggage in the check-in queue.
+- [x] **H. Verified.** A full match with bots runs with no errors or
+      warnings. Close-up screenshots of every system were checked.

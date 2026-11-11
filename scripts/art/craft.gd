@@ -133,6 +133,19 @@ static func sphere(radius: float, segs := 16) -> SphereMesh:
 	return _meshes[key]
 
 
+## A thin ring (clock bezels, windsock hoops).
+static func torus_ring(radius: float, thickness := 0.025) -> TorusMesh:
+	var key := "torus|%.3f|%.3f" % [radius, thickness]
+	if not _meshes.has(key):
+		var t := TorusMesh.new()
+		t.inner_radius = radius - thickness
+		t.outer_radius = radius
+		t.rings = 32
+		t.ring_segments = 8
+		_meshes[key] = t
+	return _meshes[key]
+
+
 static func capsule(radius: float, height: float) -> CapsuleMesh:
 	var key := "cap|%.3f|%.3f" % [radius, height]
 	if not _meshes.has(key):

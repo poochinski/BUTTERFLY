@@ -45,6 +45,7 @@ func build() -> void:
 	_revamp()
 	FeltGround.build(self)
 	Handmade.build(self)
+	AirportLife.build(self)
 	_spawn_points()
 	_bake_navigation()
 
