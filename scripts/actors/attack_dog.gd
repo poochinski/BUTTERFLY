@@ -23,6 +23,10 @@ var _run := 0.0
 var _dead_t := -1.0
 var _bark_t := 0.0
 var _hunt: Soldier
+var _stuck_t := 0.0
+var _stuck_from := Vector3.ZERO
+var _sidestep := Vector3.ZERO
+var _sidestep_t := 0.0
 
 
 func _ready() -> void:
@@ -159,6 +163,19 @@ func _physics_process(delta: float) -> void:
 			var d := next - global_position
 			d.y = 0.0
 			want = d.normalized() * SPEED if d.length() > 0.05 else Vector3.ZERO
+	# Unstick: if barely moving for a second, re-path and sidestep around
+	# whatever is in the way.
+	_stuck_t += delta
+	if _stuck_t > 1.0:
+		if global_position.distance_to(_stuck_from) < 0.5 and want.length() > 1.0:
+			_repath = 0.0
+			_sidestep = want.normalized().cross(Vector3.UP) * (1.0 if randf() < 0.5 else -1.0) * SPEED
+			_sidestep_t = 0.6
+		_stuck_t = 0.0
+		_stuck_from = global_position
+	if _sidestep_t > 0.0:
+		_sidestep_t -= delta
+		want = _sidestep
 	velocity.x = move_toward(velocity.x, want.x, 40.0 * delta)
 	velocity.z = move_toward(velocity.z, want.z, 40.0 * delta)
 	if not is_on_floor():
