@@ -106,6 +106,21 @@ class Model:
         bpy.data.meshes.remove(me)
         _cleanup(obj)
 
+    def merge(self, other, matrix):
+        """Stamp a copy of another (unfinished) Model, keeping its slots."""
+        bm = other.bm.copy()
+        bmesh.ops.transform(bm, matrix=matrix, verts=bm.verts)
+        if matrix.determinant() < 0:
+            bmesh.ops.reverse_faces(bm, faces=bm.faces)
+        remap = [self._slot(s) for s in other.slots]
+        for f in bm.faces:
+            f.material_index = remap[f.material_index]
+        me = bpy.data.meshes.new("_stamp")
+        bm.to_mesh(me)
+        bm.free()
+        self.bm.from_mesh(me)
+        bpy.data.meshes.remove(me)
+
     def finish(self, smooth_angle=40.0):
         mesh = bpy.data.meshes.new(self.name)
         bmesh.ops.remove_doubles(self.bm, verts=self.bm.verts, dist=1e-5)
@@ -294,3 +309,155 @@ def export(path_name, objects):
         tris += len(o.data.loop_triangles)
     print("exported %s: %d objects, %d triangles" % (path_name, len(objects), tris))
     return path
+
+
+# ------------------------------------------------------- shaped surfaces
+
+def _superellipse(cx, cz, rx, rz, segs, n=2.0, flat_bottom=None):
+    """Ring of points (x, z) on a superellipse; n > 2 squares it off."""
+    pts = []
+    for i in range(segs):
+        a = 2 * math.pi * i / segs
+        c, s = math.cos(a), math.sin(a)
+        x = cx + rx * math.copysign(abs(c) ** (2.0 / n), c)
+        z = cz + rz * math.copysign(abs(s) ** (2.0 / n), s)
+        if flat_bottom is not None:
+            z = max(z, flat_bottom)
+        pts.append((x, z))
+    return pts
+
+
+def loft(model, mat, sections, segs=24, cap=True, subsurf=0, loc=(0, 0, 0), rot=(0, 0, 0)):
+    """Loft rings along +Y. sections: (y, cx, cz, rx, rz[, n]) superellipse
+    cross-sections, in order. Fuselages, bodies, tanks, canopies."""
+    bm = bmesh.new()
+    rings = []
+    for s in sections:
+        y, cx, cz, rx, rz = s[:5]
+        n = s[5] if len(s) > 5 else 2.0
+        ring = [bm.verts.new((x, y, z)) for x, z in _superellipse(cx, cz, max(rx, 1e-4), max(rz, 1e-4), segs, n)]
+        rings.append(ring)
+    for a, b in zip(rings[:-1], rings[1:]):
+        for i in range(segs):
+            j = (i + 1) % segs
+            bm.faces.new((a[i], a[j], b[j], b[i]))
+    if cap:
+        bm.faces.new(list(reversed(rings[0])))
+        bm.faces.new(rings[-1])
+    bm.normal_update()
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    me = bpy.data.meshes.new("_loft")
+    bm.to_mesh(me)
+    bm.free()
+    obj = _with_mods(_tmp_object(me), subsurf=subsurf)
+    obj.matrix_world = xform(loc, rot)
+    model.add_object(obj, mat)
+
+
+def lathe(model, mat, profile, segs=24, loc=(0, 0, 0), rot=(0, 0, 0), cap=False):
+    """Spin a profile of (radius, z) points around local Z. Tyres, rims,
+    tanks, nacelles, cones."""
+    bm = bmesh.new()
+    rings = []
+    for r, z in profile:
+        ring = []
+        for i in range(segs):
+            a = 2 * math.pi * i / segs
+            ring.append(bm.verts.new((r * math.cos(a), r * math.sin(a), z)))
+        rings.append(ring)
+    for a, b in zip(rings[:-1], rings[1:]):
+        for i in range(segs):
+            j = (i + 1) % segs
+            bm.faces.new((a[i], a[j], b[j], b[i]))
+    if cap:
+        bm.faces.new(list(reversed(rings[0])))
+        bm.faces.new(rings[-1])
+    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-6)
+    bm.normal_update()
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    me = bpy.data.meshes.new("_lathe")
+    bm.to_mesh(me)
+    bm.free()
+    obj = _tmp_object(me)
+    obj.matrix_world = xform(loc, rot)
+    model.add_object(obj, mat)
+
+
+def _prism(pts, axis, a0, a1):
+    """A prism mesh: polygon pts extruded along axis ('x', 'y' or 'z')
+    from a0 to a1. pts are in the other two axes, in order (y,z) for x,
+    (x,z) for y and (x,y) for z."""
+    bm = bmesh.new()
+
+    def v(p, a):
+        if axis == "x":
+            return (a, p[0], p[1])
+        if axis == "y":
+            return (p[0], a, p[1])
+        return (p[0], p[1], a)
+
+    lo = [bm.verts.new(v(p, a0)) for p in pts]
+    hi = [bm.verts.new(v(p, a1)) for p in pts]
+    bm.faces.new(lo)
+    bm.faces.new(hi)
+    n = len(pts)
+    for i in range(n):
+        j = (i + 1) % n
+        bm.faces.new((lo[i], lo[j], hi[j], hi[i]))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    me = bpy.data.meshes.new("_prism")
+    bm.to_mesh(me)
+    bm.free()
+    return me
+
+
+def prism(model, mat, pts, axis, a0, a1, bevel=0.0, segments=2, loc=(0, 0, 0), rot=(0, 0, 0)):
+    """A bevelled extrusion of a polygon (see _prism)."""
+    obj = _with_mods(_tmp_object(_prism(pts, axis, a0, a1)), bevel=bevel, bevel_segments=segments)
+    obj.matrix_world = xform(loc, rot)
+    model.add_object(obj, mat)
+
+
+def carve(model, mat, side=None, plan=None, front=None, bevel=0.0, segments=3, loc=(0, 0, 0), rot=(0, 0, 0), big=50.0):
+    """Sculpt a body as the intersection of up to three extruded outlines:
+    side (y, z) seen from the right, plan (x, y) from above and front
+    (x, z) from the front. A car is its side profile, rounded in plan and
+    tucked in at the roof by the front view; edges are then bevelled."""
+    outlines = []
+    if side:
+        outlines.append(_prism(side, "x", -big, big))
+    if plan:
+        outlines.append(_prism(plan, "z", -big, big))
+    if front:
+        outlines.append(_prism(front, "y", -big, big))
+    base = _tmp_object(outlines[0])
+    cutters = []
+    for me in outlines[1:]:
+        c = _tmp_object(me)
+        cutters.append(c)
+        m = base.modifiers.new("Bool", "BOOLEAN")
+        m.operation = "INTERSECT"
+        m.solver = "EXACT"
+        m.object = c
+    if bevel:
+        m = base.modifiers.new("Bevel", "BEVEL")
+        m.width = bevel
+        m.segments = segments
+        m.limit_method = "ANGLE"
+        m.angle_limit = math.radians(30.0)
+        m.harden_normals = False
+    for c in cutters:
+        c.hide_set(True)
+    base.matrix_world = xform(loc, rot)
+    model.add_object(base, mat)
+    for c in cutters:
+        _cleanup(c)
+
+
+def paint_faces(model, mat, pred):
+    """Reassign the faces whose centre satisfies pred(Vector) to slot mat.
+    Painted markings (a dog's saddle, two-tone bodies) without textures."""
+    idx = model._slot(mat)
+    for f in model.bm.faces:
+        if pred(f.calc_center_median()):
+            f.material_index = idx

@@ -55,6 +55,29 @@ func _build_model() -> void:
 	var nose := Craft.mat(Craft.Kind.PLASTIC, Color(0.05, 0.05, 0.05))
 	var collar := Craft.mat(Craft.Kind.FELT, team_color())
 	_body = Craft.pivot(self, Vector3(0, 0.55, 0))
+	if ModelLib.has(Props.VEH, "dog_body"):
+		var flat := func(kind: int, col: Color) -> Material:
+			return Craft.mat(kind, col, 0, Color.WHITE, 1.0, 0.0, false)
+		var mats := {
+			"coat": flat.call(Craft.Kind.FELT, Color(0.6, 0.44, 0.28)),
+			"saddle": dark,
+			"paw": flat.call(Craft.Kind.FELT, Color(0.42, 0.3, 0.19)),
+			"nose": nose,
+			"eye": flat.call(Craft.Kind.PLASTIC, Color(0.1, 0.07, 0.04)),
+			"collar": collar,
+			"steel": flat.call(Craft.Kind.FOIL, Color(0.7, 0.71, 0.73)),
+		}
+		ModelLib.part(_body, Props.VEH, "dog_body", mats)
+		_head = Craft.pivot(_body, Vector3(0, 0.22, -0.56))
+		ModelLib.part(_head, Props.VEH, "dog_head", mats)
+		for p: Vector3 in [Vector3(-0.11, -0.05, -0.32), Vector3(0.11, -0.05, -0.32), Vector3(-0.11, -0.05, 0.32), Vector3(0.11, -0.05, 0.32)]:
+			var hip := Craft.pivot(_body, p)
+			ModelLib.part(hip, Props.VEH, "dog_leg_front" if p.z < 0.0 else "dog_leg_back", mats)
+			_legs.append(hip)
+		_tail = Craft.pivot(_body, Vector3(0, 0.09, 0.44))
+		ModelLib.part(_tail, Props.VEH, "dog_tail", mats)
+		Craft.make_moving(self)
+		return
 	# Body with the black saddle of a shepherd.
 	Craft.part(_body, Craft.capsule(0.19, 0.95), tan, Vector3.ZERO, Vector3(PI * 0.5, 0, 0), Vector3(1.0, 1.0, 0.95))
 	Craft.part(_body, Craft.capsule(0.17, 0.62), dark, Vector3(0, 0.07, 0.06), Vector3(PI * 0.5, 0, 0), Vector3(1.08, 1.0, 0.8))

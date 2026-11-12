@@ -5,6 +5,7 @@ extends Node
 ##   --ads --fire=2.0 --board --nohud --nobots --see_enemy --view=x,y,z,tx,ty,tz
 ##   --streak=heli|dogs|uav|ready --streak_team=0|1 (call a streak at 1 s)
 ##   --weapon=id (hold that gun) --reload=t (press reload at t seconds) --empty (start with an empty mag)
+##   --hangar=0..6   the modelled heli, attack dogs, SUV and quad on a stand
 ##   --armory=0..10  a lit showcase of every gun, the knife, the frag and
 ##                   both soldiers (0 wide, 1 Cardstock, 2 rifles, 3 second
 ##                   row, 4 Militia, 5-10 close-ups: M4, AK, sniper, SMG,
@@ -67,6 +68,8 @@ func _ready() -> void:
 		main.menu._open_cac()
 	if _opts.has("armory"):
 		_build_armory(int(_opts["armory"]))
+	if _opts.has("hangar"):
+		_build_hangar(int(_opts["hangar"]))
 	if _opts.has("view") or _opts.has("tour"):
 		if main.menu:
 			main.menu.visible = false
@@ -192,6 +195,54 @@ func _process(delta: float) -> void:
 
 ## A felt-covered workbench floating above the apron, in open daylight,
 ## with every gun, the knife, the frag and one soldier from each team.
+func _build_hangar(shot: int) -> void:
+	if main.menu:
+		main.menu.visible = false
+	var base := Vector3(30, 30, 10)
+	var stand := Node3D.new()
+	stand.name = "Hangar"
+	get_tree().current_scene.add_child(stand)
+	stand.global_position = base
+	Craft.box(stand, Vector3(0, -0.05, 0), Vector3(16, 0.1, 9), Craft.mat(Craft.Kind.FELT, Color(0.33, 0.34, 0.33), 0, Color.WHITE, 1.0, 0.0))
+	var heli := AttackHeli.new()
+	heli.team = 1
+	stand.add_child(heli)
+	heli.position = Vector3(-2.5, 1.6, -1.0)
+	heli.rotation.y = -0.6
+	heli._build()
+	heli.set_physics_process(false)
+	for i in 3:
+		var d := AttackDog.new()
+		d.team = i % 2
+		stand.add_child(d)
+		d.position = Vector3(2.4 + i * 0.9, 0.0, 2.2 - i * 0.3)
+		d.rotation.y = [-0.4, 1.4, 2.6][i]
+		d.set_physics_process(false)
+		d.set_process(false)
+	var suv := Props.vehicle_mats(GunBuilder.painted(Craft.Kind.PAPER, Color(0.2, 0.25, 0.22), 0.3, false))
+	ModelLib.part(stand, Props.VEH, "suv", suv, Vector3(4.5, 0, -1.5), Vector3(0, 2.4, 0))
+	var qm := Props.vehicle_mats(GunBuilder.painted(Craft.Kind.PAPER, Color(0.3, 0.33, 0.24), 0.5, false))
+	ModelLib.part(stand, Props.VEH, "quad", qm, Vector3(1.2, 0, 2.6), Vector3(0, -0.5, 0))
+	var cam := Camera3D.new()
+	cam.fov = 45.0
+	get_tree().current_scene.add_child(cam)
+	var views := [
+		[Vector3(-2.5, 5.0, 10.5), Vector3(-1.0, 1.0, 0)],
+		[Vector3(-7.5, 2.4, 3.5), Vector3(-2.5, 1.4, -1.0)],
+		[Vector3(1.0, 3.5, -5.5), Vector3(-2.5, 1.4, -1.0)],
+		[Vector3(3.6, 0.9, 4.2), Vector3(3.3, 0.45, 2.0)],
+		[Vector3(8.0, 2.2, 3.0), Vector3(4.5, 0.9, -1.5)],
+		[Vector3(1.0, 1.2, 4.6), Vector3(1.2, 0.5, 2.6)],
+		[Vector3(4.7, 0.75, 3.6), Vector3(3.3, 0.5, 1.9)],
+	]
+	var v: Array = views[clampi(shot, 0, views.size() - 1)]
+	var from: Vector3 = base + v[0]
+	var to: Vector3 = base + v[1]
+	cam.global_transform = Transform3D(Basis.looking_at(to - from), from)
+	cam.make_current()
+	set_meta("cam", cam)
+
+
 func _build_armory(shot: int) -> void:
 	if main.menu:
 		main.menu.visible = false

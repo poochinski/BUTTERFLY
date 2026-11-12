@@ -63,6 +63,30 @@ func _build() -> void:
 	var stripe := Craft.mat(Craft.Kind.PAPER, Game.TEAM_COLORS[team])
 	var o := 0.02
 	var body := Craft.pivot(self)
+	if ModelLib.has(Props.VEH, "heli_body"):
+		var flat := func(kind: int, col: Color) -> Material:
+			return Craft.mat(kind, col, 0, Color.WHITE, 1.0, 0.0, false)
+		var mats := {
+			"paint": Craft.outlined(paint, o),
+			"black": dark,
+			"glass": glass,
+			"team": stripe,
+			"interior": flat.call(Craft.Kind.FELT, Color(0.16, 0.16, 0.17)),
+			"pod": flat.call(Craft.Kind.PAPER, Color(0.2, 0.22, 0.18)),
+			"missile": flat.call(Craft.Kind.PAPER, Color(0.78, 0.78, 0.74)),
+			"blade": flat.call(Craft.Kind.PAPER, Color(0.1, 0.1, 0.11)),
+			"stripe": flat.call(Craft.Kind.PAPER, Craft.YELLOW),
+			"steel": flat.call(Craft.Kind.FOIL, Color(0.5, 0.51, 0.53)),
+		}
+		ModelLib.part(body, Props.VEH, "heli_body", mats)
+		_gun = Craft.pivot(body, Vector3(0, -0.65, -1.9))
+		ModelLib.part(_gun, Props.VEH, "heli_gun", mats)
+		_rotor = Craft.pivot(body, Vector3(0, 1.32, -0.2))
+		ModelLib.part(_rotor, Props.VEH, "heli_rotor", mats)
+		_tail_rotor = Craft.pivot(body, Vector3(0.22, 0.9, 5.6))
+		ModelLib.part(_tail_rotor, Props.VEH, "heli_tail_rotor", mats)
+		Craft.make_moving(self)
+		return
 	# Narrow tandem-seat fuselage, canopy, stub wings with rocket pods,
 	# tail boom and fin, skids, and a chin turret.
 	Craft.part(body, Craft.capsule(0.75, 5.0), Craft.outlined(paint, o), Vector3(0, 0, 0), Vector3(PI * 0.5, 0, 0), Vector3(0.8, 1.0, 1.0))

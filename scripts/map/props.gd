@@ -3,6 +3,46 @@ extends RefCounted
 ## Reusable papercraft props. Every function takes a MapBuilder and places a
 ## prop with collision where it should block movement and bullets.
 
+## Vehicles and ramp equipment modelled in Blender (tools/blender/build_vehicles.py).
+const VEH := "vehicles.glb"
+
+
+static func _flat(kind: int, col: Color, pattern := 0, col2 := Color.WHITE, pscale := 1.0, wear := 0.0) -> Material:
+	return Craft.mat(kind, col, pattern, col2, pscale, wear, false)
+
+
+## Craft materials for every vehicle material slot, around a body paint.
+static func vehicle_mats(paint: Material) -> Dictionary:
+	return {
+		"paint": paint,
+		"trim": _flat(Craft.Kind.PLASTIC, Color(0.13, 0.13, 0.14)),
+		"black": _flat(Craft.Kind.PAPER, Color(0.1, 0.1, 0.11)),
+		"rubber": _flat(Craft.Kind.PLASTIC, Color(0.07, 0.07, 0.075)),
+		"tyre": _flat(Craft.Kind.PLASTIC, Color(0.085, 0.085, 0.09)),
+		"rim": _flat(Craft.Kind.FOIL, Color(0.56, 0.57, 0.59)),
+		"steel": _flat(Craft.Kind.FOIL, Color(0.6, 0.61, 0.63)),
+		"chrome": _flat(Craft.Kind.FOIL, Color(0.82, 0.83, 0.85)),
+		"glass": Craft.cellophane(Color(0.16, 0.2, 0.24, 0.72)),
+		"lamp": _flat(Craft.Kind.GLOW, Color(1.0, 0.95, 0.84)),
+		"tail": _flat(Craft.Kind.GLOW, Color(0.72, 0.08, 0.06)),
+		"amber": _flat(Craft.Kind.GLOW, Color(1.0, 0.55, 0.1)),
+		"screen": _flat(Craft.Kind.GLOW, Color(0.62, 0.8, 0.55)),
+		"stripe": _flat(Craft.Kind.TAPE, Color(0.86, 0.86, 0.8)),
+		"plate": _flat(Craft.Kind.PAPER, Color(0.9, 0.88, 0.8), Craft.Pattern.BANDS, Color(0.2, 0.22, 0.3), 1.5),
+		"interior": _flat(Craft.Kind.FELT, Color(0.2, 0.2, 0.22), Craft.Pattern.STITCH, Color(0.32, 0.32, 0.34)),
+		"seat": _flat(Craft.Kind.FELT, Color(0.11, 0.11, 0.12), Craft.Pattern.STITCH, Color(0.25, 0.25, 0.26)),
+		"hazard": _flat(Craft.Kind.CARDBOARD, Craft.YELLOW, Craft.Pattern.HAZARD, Craft.INK, 3.0),
+		"cable": _flat(Craft.Kind.KNIT, Color(0.15, 0.15, 0.17), 0, Color.WHITE, 3.0),
+		"belt": _flat(Craft.Kind.CARDBOARD, Color(0.2, 0.21, 0.23), Craft.Pattern.BANDS, Color(0.3, 0.31, 0.34), 8.0),
+		"tank": _flat(Craft.Kind.FOIL, Color(0.82, 0.83, 0.85), 0, Color.WHITE, 1.0, 1.0),
+		"placard": _flat(Craft.Kind.PAPER, Color(0.86, 0.36, 0.12)),
+	}
+
+
+static func _vehicle(parent: Node3D, name: String, mats: Dictionary, pos := Vector3.ZERO) -> MeshInstance3D:
+	return ModelLib.part(parent, VEH, name, mats, pos)
+
+
 static func luggage(b: MapBuilder, pos: Vector3, rng: RandomNumberGenerator, solid := true) -> void:
 	var cols := [Color(0.18, 0.19, 0.21), Color(0.24, 0.25, 0.28), Craft.BLUE, Color(0.36, 0.2, 0.2), Color(0.3, 0.36, 0.32), Color(0.45, 0.4, 0.34), Craft.SLATE, Color(0.3, 0.3, 0.32)]
 	var col: Color = cols[rng.randi() % cols.size()]
@@ -142,6 +182,14 @@ static func truck(b: MapBuilder, pos: Vector3, yaw: float, body_col: Color, tank
 	var amber := Craft.mat(Craft.Kind.GLOW, Color(1.0, 0.55, 0.1), 0, Color.WHITE, 1.0, 0.0, false)
 	var stripe := Craft.mat(Craft.Kind.TAPE, Color(0.85, 0.85, 0.8) if body_col.get_luminance() < 0.5 else Color(0.2, 0.2, 0.22))
 	var steel := Craft.mat(Craft.Kind.FOIL, Color(0.6, 0.61, 0.63), 0, Color.WHITE, 1.0, 0.0, false)
+	if ModelLib.has(VEH, "truck_cab"):
+		var body := b.solid(pos + Vector3(0, 1.4, 0), Vector3(2.4, 2.0, 6.6), null, yaw)
+		var vm := vehicle_mats(GunBuilder.painted(Craft.Kind.PAPER, body_col, 0.3, false))
+		if body_col.get_luminance() > 0.5:
+			vm["stripe"] = _flat(Craft.Kind.TAPE, Color(0.2, 0.2, 0.22))
+		_vehicle(body, "truck_cab", vm, Vector3(0, -1.4, 0))
+		_vehicle(body, "truck_tank" if tank else "truck_box", vm, Vector3(0, -1.4, 0))
+		return
 	var root := b.solid(pos + Vector3(0, 1.2, 0), Vector3(2.4, 1.6, 6.5), null, yaw)
 	# Chassis and the cargo body (or tank).
 	Craft.box(root, Vector3(0, -0.85, 0.2), Vector3(2.2, 0.3, 6.0), dark)
@@ -199,6 +247,10 @@ static func suv(b: MapBuilder, pos: Vector3, yaw: float, col: Color) -> StaticBo
 	var lamp := Craft.mat(Craft.Kind.GLOW, Color(1.0, 0.95, 0.85), 0, Color.WHITE, 1.0, 0.0, false)
 	var tail := Craft.mat(Craft.Kind.GLOW, Color(0.7, 0.08, 0.06), 0, Color.WHITE, 1.0, 0.0, false)
 	var steel := Craft.mat(Craft.Kind.FOIL, Color(0.62, 0.63, 0.65), 0, Color.WHITE, 1.0, 0.0, false)
+	if ModelLib.has(VEH, "suv"):
+		var shell := b.solid(pos + Vector3(0, 1.1, 0), Vector3(1.96, 1.6, 4.7), null, yaw)
+		_vehicle(shell, "suv", vehicle_mats(paint), Vector3(0, -1.1, 0))
+		return shell
 	var body := b.solid(pos + Vector3(0, 0.95, 0), Vector3(2.0, 1.3, 4.7), null, yaw)
 	Craft.box(body, Vector3(0, -0.1, 0), Vector3(1.95, 0.8, 4.6), paint)
 	Craft.box(body, Vector3(0, 0.62, 0.3), Vector3(1.82, 0.62, 2.9), paint)
@@ -359,6 +411,10 @@ static func rug(parent: Node3D, center: Vector3, size: Vector2, col: Color, yaw 
 
 ## Ground power unit on wheels.
 static func gpu_cart(b: MapBuilder, pos: Vector3, yaw: float) -> void:
+	if ModelLib.has(VEH, "gpu_cart"):
+		var shell := b.solid(pos + Vector3(0, 0.75, 0), Vector3(1.4, 1.3, 2.2), null, yaw)
+		_vehicle(shell, "gpu_cart", vehicle_mats(GunBuilder.painted(Craft.Kind.PAPER, Craft.YELLOW, 0.3, false)), Vector3(0, -0.75, 0))
+		return
 	var body := b.solid(pos + Vector3(0, 0.75, 0), Vector3(1.4, 1.1, 2.2), Craft.mat(Craft.Kind.CARDBOARD, Craft.YELLOW), yaw)
 	Craft.box(body, Vector3(0, 0.0, -1.11), Vector3(1.1, 0.7, 0.02), Craft.mat(Craft.Kind.PAPER, Color(0.25, 0.26, 0.3)))
 	Craft.box(body, Vector3(0, 0.56, 0), Vector3(1.5, 0.06, 2.3), Craft.mat(Craft.Kind.CARDBOARD, Craft.INK, Craft.Pattern.HAZARD, Craft.YELLOW, 2.0))
@@ -372,6 +428,11 @@ static func gpu_cart(b: MapBuilder, pos: Vector3, yaw: float) -> void:
 
 ## Belt loader: an inclined conveyor on a little truck.
 static func belt_loader(b: MapBuilder, pos: Vector3, yaw: float, rise: float) -> void:
+	# The model is built for a 2 m rise; other rises use the procedural one.
+	if ModelLib.has(VEH, "belt_loader") and is_equal_approx(rise, 2.0):
+		var shell := b.solid(pos + Vector3(0, 0.55, 0), Vector3(1.6, 0.7, 4.0), null, yaw)
+		_vehicle(shell, "belt_loader", vehicle_mats(GunBuilder.painted(Craft.Kind.PAPER, Craft.YELLOW, 0.3, false)), Vector3(0, -0.55, 0))
+		return
 	var truck := b.solid(pos + Vector3(0, 0.55, 0), Vector3(1.6, 0.7, 4.0), Craft.mat(Craft.Kind.CARDBOARD, Craft.YELLOW), yaw)
 	var belt := Craft.mat(Craft.Kind.CARDBOARD, Color(0.22, 0.23, 0.26), Craft.Pattern.BANDS, Color(0.32, 0.33, 0.36), 8.0)
 	var length := 5.5
@@ -405,6 +466,10 @@ static func light_mast(b: MapBuilder, pos: Vector3, height: float, yaw := 0.0) -
 
 
 static func tug(b: MapBuilder, pos: Vector3, yaw: float) -> void:
+	if ModelLib.has(VEH, "tug"):
+		var shell := b.solid(pos + Vector3(0, 0.6, 0), Vector3(1.6, 0.8, 2.6), null, yaw)
+		_vehicle(shell, "tug", vehicle_mats(GunBuilder.painted(Craft.Kind.PAPER, Craft.YELLOW, 0.3, false)), Vector3(0, -0.6, 0))
+		return
 	var body := b.solid(pos + Vector3(0, 0.6, 0), Vector3(1.6, 0.8, 2.6), Craft.mat(Craft.Kind.CARDBOARD, Craft.YELLOW), yaw)
 	Craft.box(body, Vector3(0, 0.7, 0.4), Vector3(1.3, 0.7, 1.1), Craft.mat(Craft.Kind.CARDBOARD, Color(0.3, 0.31, 0.33)))
 	Craft.box(body, Vector3(0, 0.75, -0.16), Vector3(1.2, 0.5, 0.02), Craft.mat(Craft.Kind.PAPER, Color(0.32, 0.4, 0.46)))
@@ -413,3 +478,9 @@ static func tug(b: MapBuilder, pos: Vector3, yaw: float) -> void:
 		for z: float in [-0.85, 0.85]:
 			Craft.part(body, Craft.cylinder(0.32, 0.32, 0.26, 14), wheel, Vector3(sx * 0.8, -0.3, z), Vector3(0, 0, PI * 0.5))
 	Craft.part(body, Craft.sphere(0.1, 8), Craft.mat(Craft.Kind.GLOW, Craft.ORANGE, 0, Color.WHITE, 1.0, 0.0, false), Vector3(0, 1.12, 0.4))
+
+
+## A quad bike parked at pos (ground height).
+static func quad(b: MapBuilder, pos: Vector3, yaw: float, col: Color) -> void:
+	var shell := b.solid(pos + Vector3(0, 0.55, 0), Vector3(1.2, 0.8, 2.0), null, yaw, false)
+	_vehicle(shell, "quad", vehicle_mats(GunBuilder.painted(Craft.Kind.PAPER, col, 0.5, false)), Vector3(0, -0.55, 0))

@@ -688,23 +688,26 @@ func _garage() -> void:
 	b.solid(Vector3(11.4, y + 0.48, -2.6), Vector3(3.6, 0.95, 0.9), wood)
 	b.deco_box(Vector3(11.4, y + 1.8, -2.16), Vector3(3.4, 1.4, 0.05), Craft.mat(Craft.Kind.CARDBOARD, Color(0.62, 0.55, 0.42), Craft.Pattern.DOTS, Color(0.3, 0.26, 0.2), 3.0))
 	# Quad bike: frame, fenders, seat, tank, handlebars, racks, chunky tyres.
-	var quad := b.solid(Vector3(13.5, y + 0.55, -7.2), Vector3(1.2, 0.8, 2.0), null, 0.0, false)
-	var qpaint := GunBuilder.painted(Craft.Kind.PAPER, Color(0.3, 0.33, 0.24), 0.5, false)
-	var tyre := Craft.mat(Craft.Kind.PLASTIC, Color(0.1, 0.1, 0.11))
-	var qblack := Craft.mat(Craft.Kind.PAPER, Color(0.12, 0.12, 0.13))
-	var qsteel := Craft.mat(Craft.Kind.FOIL, Color(0.55, 0.56, 0.58))
-	Craft.box(quad, Vector3(0, -0.15, 0), Vector3(0.5, 0.25, 1.6), qblack)
-	for sz: float in [-0.65, 0.65]:
-		Craft.box(quad, Vector3(0, 0.08, sz), Vector3(1.25, 0.08, 0.6), qpaint, Vector3(0.12 * signf(sz), 0, 0))
-		Craft.box(quad, Vector3(0, 0.2, sz * 1.15), Vector3(1.0, 0.04, 0.4), qsteel)
-		for sx: float in [-0.6, 0.6]:
-			Craft.part(quad, Craft.cylinder(0.28, 0.28, 0.26, 14), tyre, Vector3(sx, -0.27, sz), Vector3(0, 0, PI * 0.5))
-			Craft.part(quad, Craft.cylinder(0.12, 0.12, 0.28, 8), qsteel, Vector3(sx, -0.27, sz), Vector3(0, 0, PI * 0.5))
-	Craft.box(quad, Vector3(0, 0.12, -0.05), Vector3(0.45, 0.25, 0.55), qpaint)
-	Craft.box(quad, Vector3(0, 0.22, 0.32), Vector3(0.38, 0.12, 0.7), qblack)
-	Craft.box(quad, Vector3(0, 0.38, -0.42), Vector3(0.06, 0.3, 0.06), qblack)
-	Craft.box(quad, Vector3(0, 0.52, -0.45), Vector3(0.75, 0.04, 0.04), qblack)
-	Craft.part(quad, Craft.sphere(0.07, 8), Craft.mat(Craft.Kind.GLOW, Color(1.0, 0.95, 0.85)), Vector3(0, 0.15, -0.95))
+	if ModelLib.has(Props.VEH, "quad"):
+		Props.quad(b, Vector3(13.5, y, -7.2), 0.0, Color(0.3, 0.33, 0.24))
+	else:
+		var quad := b.solid(Vector3(13.5, y + 0.55, -7.2), Vector3(1.2, 0.8, 2.0), null, 0.0, false)
+		var qpaint := GunBuilder.painted(Craft.Kind.PAPER, Color(0.3, 0.33, 0.24), 0.5, false)
+		var tyre := Craft.mat(Craft.Kind.PLASTIC, Color(0.1, 0.1, 0.11))
+		var qblack := Craft.mat(Craft.Kind.PAPER, Color(0.12, 0.12, 0.13))
+		var qsteel := Craft.mat(Craft.Kind.FOIL, Color(0.55, 0.56, 0.58))
+		Craft.box(quad, Vector3(0, -0.15, 0), Vector3(0.5, 0.25, 1.6), qblack)
+		for sz: float in [-0.65, 0.65]:
+			Craft.box(quad, Vector3(0, 0.08, sz), Vector3(1.25, 0.08, 0.6), qpaint, Vector3(0.12 * signf(sz), 0, 0))
+			Craft.box(quad, Vector3(0, 0.2, sz * 1.15), Vector3(1.0, 0.04, 0.4), qsteel)
+			for sx: float in [-0.6, 0.6]:
+				Craft.part(quad, Craft.cylinder(0.28, 0.28, 0.26, 14), tyre, Vector3(sx, -0.27, sz), Vector3(0, 0, PI * 0.5))
+				Craft.part(quad, Craft.cylinder(0.12, 0.12, 0.28, 8), qsteel, Vector3(sx, -0.27, sz), Vector3(0, 0, PI * 0.5))
+		Craft.box(quad, Vector3(0, 0.12, -0.05), Vector3(0.45, 0.25, 0.55), qpaint)
+		Craft.box(quad, Vector3(0, 0.22, 0.32), Vector3(0.38, 0.12, 0.7), qblack)
+		Craft.box(quad, Vector3(0, 0.38, -0.42), Vector3(0.06, 0.3, 0.06), qblack)
+		Craft.box(quad, Vector3(0, 0.52, -0.45), Vector3(0.75, 0.04, 0.04), qblack)
+		Craft.part(quad, Craft.sphere(0.07, 8), Craft.mat(Craft.Kind.GLOW, Color(1.0, 0.95, 0.85)), Vector3(0, 0.15, -0.95))
 	# Shelving with boxes and tins on the north wall; a strip light.
 	var shelf_w := Craft.mat(Craft.Kind.CARDBOARD, Color(0.5, 0.38, 0.26))
 	b.solid(Vector3(16.3, y + 1.0, -9.55), Vector3(2.0, 2.0, 0.6), null, 0.0, false)
@@ -727,8 +730,9 @@ func _garage() -> void:
 	deco.add_child(gl)
 	for i in 3:
 		b.solid(Vector3(16.6, y + 0.3, -9.6 + i * 0.35), Vector3(0.35, 0.6, 0.25), Craft.mat(Craft.Kind.PAPER, Color(0.6, 0.16, 0.13)))
+	var tyre_stack := Craft.mat(Craft.Kind.PLASTIC, Color(0.1, 0.1, 0.11))
 	for i in 4:
-		Craft.part(deco, Craft.cylinder(0.36, 0.36, 0.25, 14), tyre, Vector3(9.3, y + 0.13 + i * 0.25, -9.2))
+		Craft.part(deco, Craft.cylinder(0.36, 0.36, 0.25, 14), tyre_stack, Vector3(9.3, y + 0.13 + i * 0.25, -9.2))
 	b.solid(Vector3(9.3, y + 0.5, -9.2), Vector3(0.7, 1.0, 0.7), null, 0.0, false)
 
 
