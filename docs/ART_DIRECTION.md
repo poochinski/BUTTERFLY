@@ -233,3 +233,22 @@ stay. Everything else is sewn and glued like a hobbyist's 1/6 figure:
   sprint, jump and swap motion, third-person reload and idle
 - [x] W7. Tissue-paper flashes, cotton smoke, subtle tracers, muted debris
 - [x] W8. Before/after comparison, full match with no errors
+
+## Modelled meshes (Blender)
+
+Soldiers, guns, vehicles and the larger props are sculpted in Blender by
+the scripts in `tools/blender/` and exported to `assets/models/`. They
+follow the same material rules as everything else:
+
+- **Shape comes from Blender; material comes from Craft.** Each surface is
+  tagged with a slot name. `ModelLib.part()` maps slot names to craft
+  materials, so a truck body can be any livery colour without a new mesh.
+- **Use edge-free craft materials on modelled meshes.** Build them with
+  `box_edges = false` (`Props._flat`, `GunBuilder.painted`). The box-edge
+  mode treats a mesh as one cut box, and on a sculpted body it shades
+  large areas as raw kraft edge.
+- **Matte, not chrome, for small repeated parts.** Foil reflects the sky
+  hard. Fan blades, grilles and similar parts read better in dark plastic.
+- **Real proportions first.** Every model is built to the footprint of the
+  collision box the map already places, so cover and sight lines don't
+  change.

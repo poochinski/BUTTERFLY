@@ -5,6 +5,8 @@ extends RefCounted
 
 ## Vehicles and ramp equipment modelled in Blender (tools/blender/build_vehicles.py).
 const VEH := "vehicles.glb"
+## Props modelled in Blender (tools/blender/build_props.py).
+const PROP := "props.glb"
 
 
 static func _flat(kind: int, col: Color, pattern := 0, col2 := Color.WHITE, pscale := 1.0, wear := 0.0) -> Material:
@@ -43,6 +45,14 @@ static func _vehicle(parent: Node3D, name: String, mats: Dictionary, pos := Vect
 	return ModelLib.part(parent, VEH, name, mats, pos)
 
 
+static func _prop(parent: Node3D, name: String, mats: Dictionary, pos := Vector3.ZERO, rot := Vector3.ZERO, scl := Vector3.ONE) -> MeshInstance3D:
+	return ModelLib.part(parent, PROP, name, mats, pos, rot, scl)
+
+
+static func _modelled(name: String) -> bool:
+	return ModelLib.has(PROP, name)
+
+
 static func luggage(b: MapBuilder, pos: Vector3, rng: RandomNumberGenerator, solid := true) -> void:
 	var cols := [Color(0.18, 0.19, 0.21), Color(0.24, 0.25, 0.28), Craft.BLUE, Color(0.36, 0.2, 0.2), Color(0.3, 0.36, 0.32), Color(0.45, 0.4, 0.34), Craft.SLATE, Color(0.3, 0.3, 0.32)]
 	var col: Color = cols[rng.randi() % cols.size()]
@@ -51,6 +61,19 @@ static func luggage(b: MapBuilder, pos: Vector3, rng: RandomNumberGenerator, sol
 	var kind := Craft.Kind.FELT if rng.randf() < 0.5 else Craft.Kind.CARDBOARD
 	var m := Craft.mat(kind, col, Craft.Pattern.STITCH if kind == Craft.Kind.FELT else 0, Craft.CREAM)
 	var p := pos + Vector3(0, size.y * 0.5, 0)
+	if _modelled("suitcase_hard"):
+		# Hard cases are moulded; soft ones are a suitcase or a duffel.
+		var model := "suitcase_hard" if kind == Craft.Kind.CARDBOARD else ("duffel" if size.y < 0.45 else "suitcase_soft")
+		var holder: Node3D = b.solid(p, size, null, yaw) if solid else Craft.pivot(b.deco_root, p, Vector3(0, yaw, 0))
+		var lm := {
+			"shell": _flat(Craft.Kind.PLASTIC, col) if model == "suitcase_hard" else _flat(Craft.Kind.FELT, col, Craft.Pattern.STITCH, col.lightened(0.3)),
+			"trim": _flat(Craft.Kind.PLASTIC, Color(0.12, 0.12, 0.13)),
+			"zip": _flat(Craft.Kind.FELT, col.darkened(0.45)),
+			"handle": _flat(Craft.Kind.PLASTIC, Color(0.1, 0.1, 0.1)),
+			"wheel": _flat(Craft.Kind.PLASTIC, Color(0.07, 0.07, 0.07)),
+		}
+		_prop(holder, model, lm, Vector3.ZERO, Vector3.ZERO, Vector3(size.x / 0.6, size.y / 0.5, size.z / 0.32))
+		return
 	var node: Node3D
 	if solid:
 		node = b.solid(p, size, m, yaw)
@@ -89,6 +112,18 @@ static func counter(b: MapBuilder, pos: Vector3, length: float, yaw: float, top_
 
 static func baggage_cart(b: MapBuilder, pos: Vector3, yaw: float, rng: RandomNumberGenerator) -> void:
 	var frame := Craft.mat(Craft.Kind.CARDBOARD, Color(0.36, 0.4, 0.46))
+	if _modelled("baggage_cart"):
+		var cart := b.solid(pos + Vector3(0, 0.45, 0), Vector3(2.6, 0.12, 1.5), null, yaw)
+		var cm := vehicle_mats(GunBuilder.painted(Craft.Kind.PAPER, Craft.YELLOW, 0.3, false))
+		cm["frame"] = _flat(Craft.Kind.PAPER, Color(0.36, 0.4, 0.46))
+		cm["deck"] = _flat(Craft.Kind.CARDBOARD, Color(0.3, 0.32, 0.35), Craft.Pattern.BANDS, Color(0.24, 0.26, 0.28), 4.0)
+		cm["canopy"] = _flat(Craft.Kind.FELT, Color(0.3, 0.31, 0.33), Craft.Pattern.STITCH, Color(0.45, 0.46, 0.48))
+		_prop(cart, "baggage_cart", cm, Vector3(0, -0.45, 0))
+		for i in rng.randi_range(2, 4):
+			var lp := Vector3(rng.randf_range(-0.8, 0.8), 0.06, rng.randf_range(-0.45, 0.45))
+			var lw := (cart.global_transform * lp) if cart.is_inside_tree() else pos + Vector3(0, 0.51, 0) + lp.rotated(Vector3.UP, yaw)
+			luggage(b, Vector3(lw.x, pos.y + 0.49, lw.z), rng, false)
+		return
 	var bed := b.solid(pos + Vector3(0, 0.45, 0), Vector3(2.6, 0.12, 1.5), frame, yaw)
 	var wheel := Craft.mat(Craft.Kind.PLASTIC, Color(0.12, 0.12, 0.13), 0, Color.WHITE, 1.0, 0.0, false)
 	for sx: float in [-1.0, 1.0]:
@@ -108,6 +143,20 @@ static func baggage_cart(b: MapBuilder, pos: Vector3, yaw: float, rng: RandomNum
 static func container(b: MapBuilder, pos: Vector3, yaw: float, col: Color, label_col := Craft.CREAM) -> void:
 	# Airline cargo "can": a box with a slanted top corner.
 	var m := Craft.mat(Craft.Kind.CARDBOARD, col, Craft.Pattern.BANDS, col.darkened(0.12), 1.2)
+	if _modelled("uld"):
+		var can := b.solid(pos + Vector3(0, 0.8, 0), Vector3(2.0, 1.6, 1.55), null, yaw)
+		var um := {
+			"paint": GunBuilder.painted(Craft.Kind.FOIL if col == Craft.ALUMINIUM else Craft.Kind.PAPER, col, 0.25, false),
+			"frame": _flat(Craft.Kind.FOIL, Color(0.72, 0.73, 0.75)),
+			"base": _flat(Craft.Kind.FOIL, Color(0.42, 0.43, 0.45)),
+			"curtain": _flat(Craft.Kind.FELT, Color(0.2, 0.24, 0.3), Craft.Pattern.STITCH, Color(0.32, 0.36, 0.42)),
+			"strap": _flat(Craft.Kind.FELT, Color(0.82, 0.62, 0.16)),
+			"steel": _flat(Craft.Kind.FOIL, Color(0.55, 0.56, 0.58)),
+			"label": _flat(Craft.Kind.PAPER, label_col),
+			"ink": _flat(Craft.Kind.PAPER, Craft.INK),
+		}
+		_prop(can, "uld", um, Vector3(0, -0.8, 0))
+		return
 	var body := b.solid(pos + Vector3(0, 0.8, 0), Vector3(2.0, 1.6, 1.55), m, yaw)
 	var slant := Craft.box(body, Vector3(0, 0.58, 0.62), Vector3(1.98, 0.62, 0.62), m)
 	slant.rotation.x = -0.6
@@ -117,10 +166,22 @@ static func container(b: MapBuilder, pos: Vector3, yaw: float, col: Color, label
 
 static func crate(b: MapBuilder, pos: Vector3, size: float, yaw: float, col := Craft.KRAFT) -> StaticBody3D:
 	var m := Craft.mat(Craft.Kind.CARDBOARD, col)
-	var body := b.solid(pos + Vector3(0, size * 0.5, 0), Vector3(size, size, size), m, yaw)
+	var modelled := _modelled("box_closed")
+	var body := b.solid(pos + Vector3(0, size * 0.5, 0), Vector3(size, size, size), null if modelled else m, yaw)
 	# Hand-placed: never quite square.
 	body.rotation.x = randf_range(-0.025, 0.025)
 	body.rotation.z = randf_range(-0.025, 0.025)
+	if modelled:
+		var bm := {
+			"card": _flat(Craft.Kind.CARDBOARD, col),
+			"card_core": _flat(Craft.Kind.CARDBOARD, col.darkened(0.3)),
+			"tape": _flat(Craft.Kind.TAPE, Color(0.86, 0.8, 0.64)),
+			"ink": _flat(Craft.Kind.PAPER, Craft.INK),
+			"label": _flat(Craft.Kind.PAPER, Color(0.93, 0.92, 0.88)),
+		}
+		var opened := randf() < 0.3
+		_prop(body, "box_open" if opened else "box_closed", bm, Vector3(0, -size * 0.5, 0), Vector3(0, PI * float(randi() % 4) * 0.5, 0), Vector3.ONE * size)
+		return body
 	var tape := Craft.mat(Craft.Kind.TAPE, Color(0.86, 0.8, 0.64))
 	# Top flaps: usually taped shut, sometimes popped open.
 	var open := randf() < 0.3
@@ -139,11 +200,28 @@ static func crate(b: MapBuilder, pos: Vector3, size: float, yaw: float, col := C
 
 static func barrier(b: MapBuilder, pos: Vector3, yaw: float, length := 2.0) -> void:
 	var m := Craft.mat(Craft.Kind.CARDBOARD, Craft.ORANGE, Craft.Pattern.HAZARD, Craft.WHITE, 1.4)
+	if _modelled("barrier") and is_equal_approx(length, 3.0):
+		var wall := b.solid(pos + Vector3(0, 0.45, 0), Vector3(length, 0.9, 0.6), null, yaw)
+		_prop(wall, "barrier", {
+			"plastic_a": _flat(Craft.Kind.PLASTIC, Craft.ORANGE),
+			"plastic_b": _flat(Craft.Kind.PLASTIC, Craft.WHITE),
+			"black": _flat(Craft.Kind.PLASTIC, Color(0.1, 0.1, 0.11)),
+			"reflector": _flat(Craft.Kind.GLOW, Color(0.95, 0.6, 0.2)),
+			"steel": _flat(Craft.Kind.FOIL, Color(0.55, 0.56, 0.58)),
+		}, Vector3(0, -0.45, 0))
+		return
 	var body := b.solid(pos + Vector3(0, 0.45, 0), Vector3(length, 0.9, 0.45), m, yaw)
 	Craft.box(body, Vector3(0, -0.4, 0), Vector3(length, 0.12, 0.7), Craft.mat(Craft.Kind.CARDBOARD, Craft.WHITE))
 
 
 static func cone(b: MapBuilder, pos: Vector3) -> void:
+	if _modelled("cone"):
+		_prop(b.deco_root, "cone", {
+			"cone": _flat(Craft.Kind.PLASTIC, Craft.ORANGE),
+			"band": _flat(Craft.Kind.TAPE, Craft.WHITE),
+			"base": _flat(Craft.Kind.PLASTIC, Color(0.1, 0.1, 0.11)),
+		}, pos)
+		return
 	var m := Craft.mat(Craft.Kind.FELT, Craft.ORANGE, 0, Color.WHITE, 1.0, 0.0, false)
 	var stripe := Craft.mat(Craft.Kind.FELT, Craft.WHITE, 0, Color.WHITE, 1.0, 0.0, false)
 	Craft.part(b.deco_root, Craft.cylinder(0.04, 0.2, 0.6, 12), m, pos + Vector3(0, 0.32, 0))
@@ -157,10 +235,18 @@ static func pillar(b: MapBuilder, pos: Vector3, height: float, col: Color) -> vo
 
 
 static func planter(b: MapBuilder, pos: Vector3, rng: RandomNumberGenerator) -> void:
-	var pot := b.solid(pos + Vector3(0, 0.4, 0), Vector3(1.2, 0.8, 1.2), Craft.mat(Craft.Kind.CARDBOARD, Craft.CONCRETE_DARK))
+	var modelled := _modelled("planter")
+	var pot := b.solid(pos + Vector3(0, 0.4, 0), Vector3(1.2, 0.8, 1.2), null if modelled else Craft.mat(Craft.Kind.CARDBOARD, Craft.CONCRETE_DARK))
 	# A soil top, a clipped box hedge of felt balls and tall grass blades.
-	Craft.box(pot, Vector3(0, 0.39, 0), Vector3(1.1, 0.04, 1.1), Craft.mat(Craft.Kind.FELT, Color(0.3, 0.23, 0.16)))
-	Craft.box(pot, Vector3(0, 0.41, 0), Vector3(1.26, 0.05, 1.26), Craft.mat(Craft.Kind.CARDBOARD, Craft.CONCRETE))
+	if modelled:
+		_prop(pot, "planter", {
+			"concrete": _flat(Craft.Kind.PAPER, Craft.CONCRETE, Craft.Pattern.WALL, Craft.CONCRETE_DARK, 1.0, 1.0),
+			"concrete_dark": _flat(Craft.Kind.PAPER, Craft.CONCRETE_DARK),
+			"soil": _flat(Craft.Kind.FELT, Color(0.3, 0.23, 0.16)),
+		}, Vector3(0, -0.4, 0))
+	else:
+		Craft.box(pot, Vector3(0, 0.39, 0), Vector3(1.1, 0.04, 1.1), Craft.mat(Craft.Kind.FELT, Color(0.3, 0.23, 0.16)))
+		Craft.box(pot, Vector3(0, 0.41, 0), Vector3(1.26, 0.05, 1.26), Craft.mat(Craft.Kind.CARDBOARD, Craft.CONCRETE))
 	var greens := [Craft.mat(Craft.Kind.FELT, Color(0.24, 0.34, 0.19), 0, Color.WHITE, 1.0, 0.0, false), Craft.mat(Craft.Kind.FELT, Color(0.3, 0.38, 0.21), 0, Color.WHITE, 1.0, 0.0, false)]
 	for i in 7:
 		var a := TAU * i / 7.0 + rng.randf() * 0.3
@@ -308,6 +394,22 @@ static func gate_seats(b: MapBuilder, pos: Vector3, yaw: float, seats: int, col:
 	var shell := Craft.mat(Craft.Kind.PAPER, Color(0.2, 0.21, 0.23))
 	var pad := Craft.mat(Craft.Kind.FELT, col, Craft.Pattern.STITCH, col.darkened(0.35))
 	var body := b.solid(pos + Vector3(0, 0.25, 0), Vector3(w, 0.5, 0.62), null, yaw)
+	if _modelled("gate_seat"):
+		var gm := {
+			"shell": _flat(Craft.Kind.PLASTIC, Color(0.2, 0.21, 0.23)),
+			"pad": _flat(Craft.Kind.FELT, col, Craft.Pattern.STITCH, col.darkened(0.35)),
+			"steel": _flat(Craft.Kind.FOIL, Color(0.6, 0.62, 0.65)),
+			"black": _flat(Craft.Kind.PLASTIC, Color(0.1, 0.1, 0.11)),
+		}
+		var floor_y := Vector3(0, -0.25, 0)
+		_prop(body, "gate_beam", gm, floor_y, Vector3.ZERO, Vector3(w + 0.06, 1, 1))
+		for leg: float in [-w * 0.36, w * 0.36]:
+			_prop(body, "gate_leg", gm, floor_y + Vector3(leg, 0, 0))
+		for i in seats:
+			_prop(body, "gate_seat", gm, floor_y + Vector3(-w * 0.5 + 0.31 + i * 0.62, 0, 0))
+		for i in seats + 1:
+			_prop(body, "gate_arm", gm, floor_y + Vector3(-w * 0.5 + i * 0.62, 0, 0))
+		return
 	Craft.box(body, Vector3(0, -0.02, 0.02), Vector3(w + 0.06, 0.07, 0.09), steel)
 	for leg: float in [-w * 0.36, w * 0.36]:
 		Craft.box(body, Vector3(leg, -0.13, 0.02), Vector3(0.07, 0.22, 0.07), steel)
@@ -337,6 +439,15 @@ static func vending(b: MapBuilder, pos: Vector3, yaw: float, col: Color, rng: Ra
 
 
 static func trash_bin(b: MapBuilder, pos: Vector3, col: Color) -> void:
+	if _modelled("bin"):
+		var can := b.column(pos, 0.32, 0.95, null)
+		_prop(can, "bin", {
+			"paint": _flat(Craft.Kind.PLASTIC, col),
+			"paint_dark": _flat(Craft.Kind.PLASTIC, col.darkened(0.2)),
+			"lid": _flat(Craft.Kind.PLASTIC, Color(0.25, 0.25, 0.28)),
+			"black": _flat(Craft.Kind.PLASTIC, Color(0.06, 0.06, 0.06)),
+		}, Vector3(0, -0.475, 0))
+		return
 	var body := b.column(pos, 0.32, 0.95, Craft.mat(Craft.Kind.CARDBOARD, col, Craft.Pattern.BANDS, col.darkened(0.2), 6.0, 1.0, false))
 	Craft.part(body, Craft.cylinder(0.36, 0.36, 0.08, 18), Craft.mat(Craft.Kind.PLASTIC, Color(0.25, 0.25, 0.28), 0, Color.WHITE, 1.0, 0.0, false), Vector3(0, 0.5, 0))
 
@@ -484,3 +595,13 @@ static func tug(b: MapBuilder, pos: Vector3, yaw: float) -> void:
 static func quad(b: MapBuilder, pos: Vector3, yaw: float, col: Color) -> void:
 	var shell := b.solid(pos + Vector3(0, 0.55, 0), Vector3(1.2, 0.8, 2.0), null, yaw, false)
 	_vehicle(shell, "quad", vehicle_mats(GunBuilder.painted(Craft.Kind.PAPER, col, 0.5, false)), Vector3(0, -0.55, 0))
+
+
+## A fuel drum standing at pos (ground height).
+static func drum(b: MapBuilder, pos: Vector3, col: Color, turn := 0.0) -> void:
+	var body := b.column(pos, 0.36, 1.0, null)
+	_prop(body, "drum", {
+		"paint": GunBuilder.painted(Craft.Kind.PAPER, col, 0.45, false),
+		"steel": _flat(Craft.Kind.FOIL, Color(0.6, 0.61, 0.63)),
+		"label": _flat(Craft.Kind.PAPER, Color(0.85, 0.8, 0.62), Craft.Pattern.BANDS, Color(0.6, 0.2, 0.12), 6.0),
+	}, Vector3(0, -0.5, 0), Vector3(0, turn, 0))

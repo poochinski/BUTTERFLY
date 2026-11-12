@@ -263,13 +263,31 @@ func _airliner() -> void:
 		var ez := zc + side * 8.5
 		var eng := Craft.mat(Craft.Kind.FOIL, Color(0.82, 0.84, 0.88), 0, Color.WHITE, 1.0, 1.0, false)
 		var body := b.solid(Vector3(16.5, 1.7, ez), Vector3(5.0, 2.0, 2.0), null)
-		Craft.part(body, Craft.cylinder(1.0, 1.0, 5.0, 24), eng, Vector3.ZERO, Vector3(0, 0, PI * 0.5))
-		Craft.part(body, Craft.cylinder(0.75, 0.75, 0.1, 20), Craft.mat(Craft.Kind.PAPER, Color(0.12, 0.12, 0.14), 0, Color.WHITE, 1.0, 0.0, false), Vector3(-2.52, 0, 0), Vector3(0, 0, PI * 0.5))
-		Craft.part(body, Craft.cylinder(0.3, 0.3, 0.12, 10), Craft.mat(Craft.Kind.FOIL, Color(0.7, 0.71, 0.73), 0, Color.WHITE, 1.0, 0.0, false), Vector3(-2.56, 0, 0), Vector3(0, 0, PI * 0.5))
-		Craft.box(deco, Vector3(17, 2.55, ez), Vector3(3.0, 0.5, 0.3), wing_m)
+		if ModelLib.has(Props.PROP, "engine"):
+			var em := {
+				"skin": Craft.mat(Craft.Kind.PAPER, Color(0.88, 0.88, 0.86), 0, Color.WHITE, 1.0, 0.0, false),
+				"lip": Craft.mat(Craft.Kind.FOIL, Color(0.78, 0.79, 0.81), 0, Color.WHITE, 1.0, 0.0, false),
+				"dark": Craft.mat(Craft.Kind.PAPER, Color(0.1, 0.1, 0.11), 0, Color.WHITE, 1.0, 0.0, false),
+				"fan": Craft.mat(Craft.Kind.PLASTIC, Color(0.2, 0.21, 0.23), 0, Color.WHITE, 1.0, 0.0, false),
+				"spinner": Craft.mat(Craft.Kind.FOIL, Color(0.7, 0.71, 0.73), 0, Color.WHITE, 1.0, 0.0, false),
+				"seam": Craft.mat(Craft.Kind.PAPER, Color(0.6, 0.6, 0.6), 0, Color.WHITE, 1.0, 0.0, false),
+			}
+			# The model's intake faces Godot -Z; the aircraft's nose is -X.
+			ModelLib.part(body, Props.PROP, "engine", em, Vector3.ZERO, Vector3(0, PI * 0.5, 0))
+		else:
+			Craft.part(body, Craft.cylinder(1.0, 1.0, 5.0, 24), eng, Vector3.ZERO, Vector3(0, 0, PI * 0.5))
+			Craft.part(body, Craft.cylinder(0.75, 0.75, 0.1, 20), Craft.mat(Craft.Kind.PAPER, Color(0.12, 0.12, 0.14), 0, Color.WHITE, 1.0, 0.0, false), Vector3(-2.52, 0, 0), Vector3(0, 0, PI * 0.5))
+			Craft.part(body, Craft.cylinder(0.3, 0.3, 0.12, 10), Craft.mat(Craft.Kind.FOIL, Color(0.7, 0.71, 0.73), 0, Color.WHITE, 1.0, 0.0, false), Vector3(-2.56, 0, 0), Vector3(0, 0, PI * 0.5))
+			Craft.box(deco, Vector3(17, 2.55, ez), Vector3(3.0, 0.5, 0.3), wing_m)
 	# Landing gear.
 	var tyre := Craft.mat(Craft.Kind.PLASTIC, Color(0.12, 0.12, 0.13), 0, Color.WHITE, 1.0, 0.0, false)
 	for g in [Vector3(-3, 0, zc), Vector3(17, 0, zc - 2.2), Vector3(17, 0, zc + 2.2)]:
+		if ModelLib.has(Props.PROP, "gear"):
+			var leg := b.column(g, 0.18, 1.4, null)
+			var gm := Props.vehicle_mats(Craft.mat(Craft.Kind.FOIL, Color(0.7, 0.7, 0.72), 0, Color.WHITE, 1.0, 0.0, false))
+			gm["steel"] = Craft.mat(Craft.Kind.FOIL, Color(0.7, 0.7, 0.72), 0, Color.WHITE, 1.0, 0.0, false)
+			ModelLib.part(leg, Props.PROP, "gear", gm, Vector3(0, -0.7, 0), Vector3(0, PI * 0.5, 0))
+			continue
 		b.column(g + Vector3(0, 0, 0), 0.18, 1.4, Craft.mat(Craft.Kind.FOIL, Color(0.7, 0.7, 0.72), 0, Color.WHITE, 1.0, 0.0, false))
 		Craft.part(deco, Craft.cylinder(0.55, 0.55, 0.45, 16), tyre, g + Vector3(0, 0.55, 0), Vector3(PI * 0.5, 0, 0))
 
@@ -639,7 +657,10 @@ func _revamp() -> void:
 	var zc := -2.0
 	for side: float in [-1.0, 1.0]:
 		var ez := zc + side * 8.5
-		Craft.part(r, Craft.cutout(Craft.star_points(0.72, 0.25, 9), 0.03), Craft.mat(Craft.Kind.FOIL, Color(0.75, 0.76, 0.8), 0, Color.WHITE, 1.0, 0.0, false), Vector3(13.95, 1.7, ez), Vector3(0, PI * 0.5, 0.2))
+		# The modelled engine has its own fan; the cut-out one is for the
+		# procedural fallback.
+		if not ModelLib.has(Props.PROP, "engine"):
+			Craft.part(r, Craft.cutout(Craft.star_points(0.72, 0.25, 9), 0.03), Craft.mat(Craft.Kind.FOIL, Color(0.75, 0.76, 0.8), 0, Color.WHITE, 1.0, 0.0, false), Vector3(13.95, 1.7, ez), Vector3(0, PI * 0.5, 0.2))
 		var tip := zc + side * 19.2
 		Craft.part(r, Craft.sphere(0.25, 10), Craft.mat(Craft.Kind.GLOW, Color(0.2, 1.0, 0.3) if side > 0.0 else Color(1.0, 0.15, 0.1), 0, Color.WHITE, 1.0, 0.0, false), Vector3(24.3, 2.85, tip))
 	var door_m := Craft.mat(Craft.Kind.PAPER, Color(0.55, 0.6, 0.7), 0, Color.WHITE, 1.0, 0.0, false)

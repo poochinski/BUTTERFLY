@@ -138,6 +138,46 @@ tarmac slabs, layered lawns with fringe-cut grass, mud and puddles, felt
 gravel, stitched road markings. Buildings are taped, tied with yarn,
 pinned with brads and hot-glued. See `docs/ENVIRONMENT_PASS.md`.
 
+## Models built in Blender
+
+![Blender models](docs/blender_pass.jpg)
+
+Soldiers, guns, vehicles, the killstreaks and the big props are now real
+modelled meshes, built procedurally in Blender (`tools/blender/`) and
+exported as glTF to `assets/models/`. Every surface carries a material
+*slot name* ("uniform", "steel", "glass"...), and `ModelLib` swaps each slot
+for the matching craft material in Godot, so the models keep the felt, card
+and foil look of everything else.
+
+- **Soldiers** (`soldier.glb`): a sculpted action figure with two head
+  variants, helmet and headset, plate carrier or chest rig, beanie, shemagh
+  or beard, gloved hands, boots and knee pads.
+- **Guns** (`guns.glb`): all nine guns plus the red dot, holo, ACOG and
+  flip-up irons. The mag, pump, charging handle, slide and bolt are
+  separate meshes, so reloads still animate.
+- **Vehicles** (`vehicles.glb`):
+  - airport service truck with a box or fuel-tank body
+  - SUV, baggage tug, power cart, belt loader and quad bike, with
+    sculpted bodies, glass, interiors, lights, tyre treads and dished rims
+  - the attack helicopter (body, rotors, chin gun) and the attack dog
+- **Props** (`props.glb`):
+  - shipping cartons (taped shut or open), cargo containers, baggage carts
+  - hard and soft suitcases and duffels
+  - traffic cones, water-filled barriers, gate seating, planters, fuel
+    drums and a litter bin
+  - the airliner's turbofan engines and landing gear
+
+Rebuild a model set after editing its script (needs the `bpy` module):
+
+```
+python tools/blender/build_soldier.py
+python tools/blender/build_guns.py
+python tools/blender/build_vehicles.py
+python tools/blender/build_props.py
+```
+
+If a .glb is missing, the game falls back to the older procedural models.
+
 ## New in this update
 
 - **Weapon pickups:** fallen soldiers drop their gun. Walk over a gun you
@@ -237,6 +277,8 @@ scripts/actors/    Soldier base, Player, Bot, papercraft doll, viewmodel
 scripts/match/     Team Deathmatch rules, spawns, scoring, UAV
 scripts/ui/        HUD, minimap, menus
 shaders/           craft materials, ink outlines, cellophane, sky
+assets/models/     glTF meshes exported from Blender
+tools/blender/     Blender build scripts for those meshes (bkit helpers)
 ```
 
 ## Roadmap

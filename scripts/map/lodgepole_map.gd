@@ -813,8 +813,12 @@ func _helipad() -> void:
 	for bar: Array in [[Vector3(-55.2, y + 0.1, 1), Vector3(0.6, 0.02, 4.0)], [Vector3(-52.8, y + 0.1, 1), Vector3(0.6, 0.02, 4.0)], [Vector3(-54, y + 0.1, 1), Vector3(2.4, 0.02, 0.6)]]:
 		b.deco_box(bar[0], bar[1], white, Vector3.ZERO, false)
 	# Fuel drums and a storage box: cover at the spawn.
-	for p: Vector3 in [Vector3(-48.5, y, -4.5), Vector3(-47.7, y, -4.5), Vector3(-48.1, y, -3.7)]:
-		b.column(p, 0.36, 1.0, Craft.mat(Craft.Kind.PAPER, Color(0.24, 0.32, 0.24), Craft.Pattern.BANDS, Color(0.2, 0.27, 0.2), 6.0))
+	var drums := [Vector3(-48.5, y, -4.5), Vector3(-47.7, y, -4.5), Vector3(-48.1, y, -3.7)]
+	for i in drums.size():
+		if ModelLib.has(Props.PROP, "drum"):
+			Props.drum(b, drums[i], Color(0.24, 0.32, 0.24), i * 1.9)
+		else:
+			b.column(drums[i], 0.36, 1.0, Craft.mat(Craft.Kind.PAPER, Color(0.24, 0.32, 0.24), Craft.Pattern.BANDS, Color(0.2, 0.27, 0.2), 6.0))
 	Props.container(b, Vector3(-48.5, y, 10.5), PI * 0.5, Color(0.3, 0.36, 0.3))
 	# Windsock on its pole.
 	b.column(Vector3(-60, y, -5), 0.08, 5.0, Craft.mat(Craft.Kind.CARDBOARD, Color(0.85, 0.85, 0.85), Craft.Pattern.BANDS, Craft.RED, 1.2))

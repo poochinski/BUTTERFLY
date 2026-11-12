@@ -635,4 +635,5 @@ def main():
     bkit.export("vehicles.glb", objs)
 
 
-main()
+if __name__ == "__main__":
+    main()

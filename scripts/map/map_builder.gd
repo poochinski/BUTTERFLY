@@ -123,7 +123,8 @@ func stairs(bottom: Vector3, top: Vector3, width: float, material: Material, sid
 			rail.rotation = Vector3(pitch, yaw, 0)
 
 
-## A solid upright cylinder (pillars, drums, tanks).
+## A solid upright cylinder (pillars, drums, tanks). A null material gives
+## collision only, for a modelled mesh to be added on top.
 func column(pos: Vector3, radius: float, height: float, material: Material) -> StaticBody3D:
 	var body := StaticBody3D.new()
 	body.collision_layer = WORLD_LAYER
@@ -135,7 +136,8 @@ func column(pos: Vector3, radius: float, height: float, material: Material) -> S
 	cs.height = height
 	shape.shape = cs
 	body.add_child(shape)
-	Craft.part(body, Craft.cylinder(radius, radius, height, 18), material)
+	if material:
+		Craft.part(body, Craft.cylinder(radius, radius, height, 18), material)
 	nav_root.add_child(body)
 	return body
 
